@@ -1,0 +1,601 @@
+#!/usr/bin/env python3
+import sys
+import os
+import json
+import subprocess
+import importlib.util
+from datetime import datetime
+from pathlib import Path
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TOOLS_DIR = os.path.join(BASE_DIR, "tools")
+CONFIG_DIR = os.path.expanduser("~/.hacklab")
+CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
+PROGRESS_FILE = os.path.join(CONFIG_DIR, "progress.json")
+
+# Цвета для вывода
+class Colors:
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    CYAN = '\033[96m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+def load_config():
+    if not os.path.exists(CONFIG_FILE):
+        return {"mode": "beginner", "level": 1, "xp": 0, "unlocked_tools": []}
+    with open(CONFIG_FILE, "r") as f:
+        return json.load(f)
+
+def save_config(data):
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def check_level_up(config):
+    if config.get("mode") != "beginner":
+        return config
+    
+    xp_needed = [0, 100, 250, 500, 850, 1300, 1850, 2500, 3250, 4100]
+    level = config.get("level", 1)
+    xp = config.get("xp", 0)
+    
+    while level < 10 and xp >= xp_needed[level]:
+        level += 1
+        print(f"\n{Colors.GREEN}🎉 УРОВЕНЬ ПОВЫШЕН: {level-1} → {level}!{Colors.END}")
+        
+        level_names = {
+            1: "🥚 Egg", 2: "🐣 Chick", 3: "🐥 Chicken",
+            4: "🦅 Eagle", 5: "🦉 Owl", 6: "🐺 Wolf",
+            7: "🐉 Dragon", 8: "🧙 Wizard", 9: "👑 King",
+            10: "🏆 Legend"
+        }
+        
+        if level in level_names:
+            print(f"{Colors.YELLOW}🏆 Новый титул: {level_names[level]}{Colors.END}")
+        
+        tools_unlocked = {
+            1: ["network_info", "port_check"],
+            2: ["web_scanner"],
+            3: ["ssl_checker"],
+            4: ["whois_checker"],
+            5: ["dir_buster"],
+            6: ["subdomain_scanner"],
+            7: ["cve_lookup"],
+            8: ["hash_cracker"],
+            9: ["sql_tester"],
+            10: ["xss_scanner", "api_fuzzer"]
+        }
+        
+        if level in tools_unlocked:
+            unlocked = config.get("unlocked_tools", [])
+            for tool in tools_unlocked[level]:
+                if tool not in unlocked:
+                    unlocked.append(tool)
+            config["unlocked_tools"] = unlocked
+            
+            print(f"{Colors.CYAN}🔓 Разблокировано инструментов:{Colors.END}")
+            for tool in tools_unlocked[level]:
+                tool_name = tool.replace("_", " ").title()
+                print(f"   • {tool_name}")
+        
+        if level == 10:
+            print(f"\n{Colors.MAGENTA}🚀 ПОЗДРАВЛЯЕМ! Вы достигли УРОВНЯ 10!{Colors.END}")
+            print(f"{Colors.BLUE}💼 Вы готовы перейти в Профессиональный режим!{Colors.END}")
+            print(f"{Colors.YELLOW}💡 Используйте: hl mode professional{Colors.END}")
+        
+        print("="*50)
+    
+    config["level"] = level
+    return config
+
+def first_run():
+    print("="*60)
+    print(f"{Colors.BOLD}🚀 HACKLAB MANAGER v2.0{Colors.END}")
+    print("="*60)
+    print()
+    print(f"{Colors.BOLD}Выберите ваш уровень:{Colors.END}")
+    print()
+    print(f"{Colors.GREEN}[1] 🎓 НОВИЧОК{Colors.END}")
+    print("    • Пошаговое обучение (15 уроков)")
+    print("    • 10 уровней с разблокировкой инструментов")
+    print("    • Безопасные учебные цели")
+    print("    • XP система и достижения")
+    print()
+    print(f"{Colors.RED}[2] 🔥 ПРОФЕССИОНАЛ{Colors.END}")
+    print("    • Все 12+ инструментов сразу")
+    print("    • Нет ограничений по целям")
+    print("    • Расширенные функции")
+    print("    • Для опытных пентестеров")
+    print()
+    
+    while True:
+        choice = input(f"{Colors.YELLOW}Ваш выбор (1 или 2): {Colors.END}").strip()
+        if choice == "1":
+            config = {
+                "mode": "beginner",
+                "level": 1,
+                "xp": 0,
+                "unlocked_tools": ["network_info", "port_check"],
+                "first_run": False,
+                "created": datetime.now().isoformat()
+            }
+            save_config(config)
+            print(f"{Colors.GREEN}✅ Режим 'Новичок' активирован!{Colors.END}")
+            break
+        elif choice == "2":
+            config = {
+                "mode": "professional",
+                "level": 10,
+                "xp": 5000,
+                "unlocked_tools": [
+                    "network_info", "port_check", "web_scanner", 
+                    "ssl_checker", "whois_checker", "dir_buster",
+                    "subdomain_scanner", "cve_lookup", "hash_cracker",
+                    "sql_tester", "xss_scanner", "api_fuzzer"
+                ],
+                "first_run": False,
+                "created": datetime.now().isoformat()
+            }
+            save_config(config)
+            print(f"{Colors.RED}🔥 Профессиональный режим активирован!{Colors.END}")
+            print(f"{Colors.GREEN}Все 12 инструментов доступны!{Colors.END}")
+            break
+        else:
+            print(f"{Colors.RED}❌ Введите 1 или 2{Colors.END}")
+
+def show_welcome():
+    config = load_config()
+    mode = config.get("mode", "beginner")
+    level = config.get("level", 1)
+    xp = config.get("xp", 0)
+    
+    print("="*60)
+    print(f"{Colors.BOLD}🚀 HACKLAB MANAGER v2.0{Colors.END}")
+    print("="*60)
+    
+    mode_display = f"{Colors.GREEN}НОВИЧОК{Colors.END}" if mode == "beginner" else f"{Colors.RED}ПРОФЕССИОНАЛ{Colors.END}"
+    
+    print(f"👤 Режим: {mode_display}")
+    print(f"🎮 Уровень: {level}")
+    print(f"⭐ XP: {xp}")
+    print(f"🛠️  Инструментов: {len(config.get('unlocked_tools', []))}/12")
+    print("="*60)
+    print()
+    print(f"{Colors.BOLD}📋 ОСНОВНЫЕ КОМАНДЫ:{Colors.END}")
+    print(f"  {Colors.CYAN}hl scan <target>{Colors.END}     - Сканирование цели")
+    print(f"  {Colors.CYAN}hl dashboard{Colors.END}        - Ваш прогресс")
+    print(f"  {Colors.CYAN}hl tools{Colors.END}            - Инструменты")
+    print(f"  {Colors.CYAN}hl mode [beg/pro]{Colors.END}   - Сменить режим")
+    print(f"  {Colors.CYAN}hl learn{Colors.END}            - Обучение")
+    print(f"  {Colors.CYAN}hl premium{Colors.END}          - Premium информация")
+    print(f"  {Colors.CYAN}hl help{Colors.END}             - Справка")
+    print()
+    
+    if mode == "beginner":
+        print(f"{Colors.YELLOW}🎯 ЦЕЛЬ: Достичь 10 уровня и стать Профессионалом!{Colors.END}")
+        print(f"{Colors.YELLOW}💡 Используйте: hl learn - для обучения{Colors.END}")
+    else:
+        print(f"{Colors.RED}🔥 ВНИМАНИЕ: Профессиональный режим - нет ограничений!{Colors.END}")
+        print(f"{Colors.RED}💡 Используйте инструменты ответственно.{Colors.END}")
+    
+    print()
+    print(f"{Colors.BOLD}Примеры:{Colors.END}")
+    print(f"  hl scan scanme.nmap.org")
+    print(f"  hl scan example.com --tool web_scanner")
+    print(f"  hl mode professional")
+    print("="*60)
+
+def load_tool_module(tool_name):
+    tool_path = os.path.join(TOOLS_DIR, f"{tool_name}.py")
+    
+    if not os.path.exists(tool_path):
+        print(f"{Colors.RED}❌ Инструмент '{tool_name}' не найден{Colors.END}")
+        print(f"{Colors.YELLOW}💡 Файл должен быть: {tool_path}{Colors.END}")
+        return None
+    
+    try:
+        # Добавляем директорию tools в sys.path
+        sys.path.insert(0, TOOLS_DIR)
+        
+        # Импортируем модуль
+        module_name = tool_name
+        spec = importlib.util.spec_from_file_location(module_name, tool_path)
+        module = importlib.util.module_from_spec(spec)
+        
+        # Выполняем модуль
+        spec.loader.exec_module(module)
+        
+        # Ищем класс с правильным именем
+        # Формируем имя класса: network_info -> NetworkInfo
+        class_name = ''.join(word.capitalize() for word in tool_name.split('_'))
+        
+        # Проверяем наличие класса
+        if hasattr(module, class_name):
+            tool_class = getattr(module, class_name)
+            return tool_class()
+        else:
+            # Пробуем найти любой класс в модуле
+            for attr_name in dir(module):
+                attr = getattr(module, attr_name)
+                if isinstance(attr, type) and attr.__module__ == module.__name__:
+                    print(f"{Colors.YELLOW}⚠️  Найден класс: {attr_name} (ожидался: {class_name}){Colors.END}")
+                    return attr()
+            
+            print(f"{Colors.RED}❌ Не найден класс в модуле {tool_name}{Colors.END}")
+            return None
+            
+    except Exception as e:
+        print(f"{Colors.RED}❌ Ошибка загрузки инструмента {tool_name}: {e}{Colors.END}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def cmd_scan(target, tool_name=None):
+    config = load_config()
+    mode = config.get("mode", "beginner")
+    level = config.get("level", 1)
+    unlocked_tools = config.get("unlocked_tools", [])
+    
+    # Безопасные цели для новичков
+    safe_targets = ["scanme.nmap.org", "example.com", "8.8.8.8", "1.1.1.1", "127.0.0.1"]
+    
+    if mode == "beginner" and target not in safe_targets:
+        print(f"{Colors.RED}❌ В режиме Новичка разрешены только безопасные цели:{Colors.END}")
+        for t in safe_targets:
+            print(f"   • {t}")
+        print()
+        print(f"{Colors.YELLOW}💡 Используйте: hl mode professional для других целей{Colors.END}")
+        return
+    
+    if tool_name:
+        # Проверяем доступность инструмента
+        if tool_name not in unlocked_tools:
+            print(f"{Colors.RED}❌ Инструмент '{tool_name}' не разблокирован{Colors.END}")
+            
+            # Показываем, на каком уровне разблокируется
+            tool_levels = {
+                "network_info": 1, "port_check": 1,
+                "web_scanner": 2, "ssl_checker": 3,
+                "whois_checker": 4, "dir_buster": 5,
+                "subdomain_scanner": 6, "cve_lookup": 7,
+                "hash_cracker": 8, "sql_tester": 9,
+                "xss_scanner": 10, "api_fuzzer": 10
+            }
+            
+            if tool_name in tool_levels:
+                req_level = tool_levels[tool_name]
+                print(f"   📊 Разблокируется на уровне: {req_level}")
+                print(f"   📈 Ваш уровень: {level}")
+            
+            return
+        
+        # Загружаем и запускаем инструмент
+        print(f"\n{Colors.BLUE}🛠️  Запускаю {tool_name.replace('_', ' ').title()}...{Colors.END}")
+        tool = load_tool_module(tool_name)
+        
+        if tool:
+            try:
+                result = tool.run(target)
+                
+                # Добавляем XP
+                if mode == "beginner":
+                    old_level = config.get("level", 1)
+                    config["xp"] = config.get("xp", 0) + 25
+                    config = check_level_up(config)
+                    save_config(config)
+                    
+                    print(f"\n{Colors.GREEN}✨ +25 XP получено!{Colors.END}")
+                    
+                    if config.get("level", 1) > old_level:
+                        print(f"{Colors.GREEN}🏆 Уровень повышен!{Colors.END}")
+                
+            except Exception as e:
+                print(f"{Colors.RED}❌ Ошибка выполнения инструмента: {e}{Colors.END}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f"{Colors.RED}❌ Не удалось загрузить инструмент {tool_name}{Colors.END}")
+    
+    else:
+        # Автоматический выбор инструмента
+        print(f"\n{Colors.BLUE}🎯 Сканирование цели: {target}{Colors.END}")
+        
+        # Показываем доступные инструменты
+        print(f"{Colors.CYAN}🔧 Доступные инструменты:{Colors.END}")
+        available = []
+        for tool in unlocked_tools:
+            tool_display = tool.replace("_", " ").title()
+            print(f"   • {tool_display} ({tool})")
+            available.append(tool)
+        
+        if not available:
+            print(f"{Colors.YELLOW}⚠️  Нет доступных инструментов{Colors.END}")
+            print(f"{Colors.YELLOW}💡 Начните с: hl learn{Colors.END}")
+            return
+        
+        # Спросим пользователя
+        print(f"\n{Colors.YELLOW}Выберите инструмент (или нажмите Enter для network_info):{Colors.END}")
+        choice = input(f"{Colors.CYAN}> {Colors.END}").strip().lower()
+        
+        if choice == "":
+            choice = "network_info"
+        
+        if choice in available:
+            cmd_scan(target, choice)
+        else:
+            print(f"{Colors.RED}❌ Инструмент не доступен{Colors.END}")
+            print(f"{Colors.YELLOW}💡 Используйте: hl scan {target} --tool [имя]{Colors.END}")
+
+def cmd_dashboard():
+    config = load_config()
+    mode = config.get("mode", "beginner")
+    level = config.get("level", 1)
+    xp = config.get("xp", 0)
+    unlocked = config.get("unlocked_tools", [])
+    
+    print("="*60)
+    print(f"{Colors.BOLD}📊 ВАШ ПРОГРЕСС{Colors.END}")
+    print("="*60)
+    
+    mode_display = f"{Colors.GREEN}НОВИЧОК{Colors.END}" if mode == "beginner" else f"{Colors.RED}ПРОФЕССИОНАЛ{Colors.END}"
+    
+    print(f"👤 Режим: {mode_display}")
+    print(f"🎮 Уровень: {level}")
+    print(f"⭐ XP: {xp}")
+    print(f"🔓 Инструментов: {len(unlocked)}/12")
+    
+    if mode == "beginner":
+        xp_needed = [0, 100, 250, 500, 850, 1300, 1850, 2500, 3250, 4100]
+        
+        if level < 10:
+            current_xp = xp - xp_needed[level-1]
+            needed_xp = xp_needed[level] - xp_needed[level-1]
+            progress = (current_xp / needed_xp) * 100 if needed_xp > 0 else 100
+            
+            # Прогресс бар
+            bar_length = 30
+            filled = int(bar_length * current_xp / needed_xp)
+            bar = f"{Colors.GREEN}{'█' * filled}{Colors.END}{'░' * (bar_length - filled)}"
+            
+            print(f"\n📈 До уровня {level+1}:")
+            print(f"   {bar} {progress:.1f}%")
+            print(f"   {current_xp}/{needed_xp} XP")
+        
+        if level >= 10:
+            print(f"\n{Colors.MAGENTA}🚀 ПОЗДРАВЛЯЕМ! Вы достигли 10 уровня!{Colors.END}")
+            print(f"{Colors.YELLOW}💼 Вы готовы перейти в Профессиональный режим!{Colors.END}")
+            print(f"{Colors.CYAN}💡 Используйте: hl mode professional{Colors.END}")
+    
+    print("\n" + "="*60)
+
+def cmd_tools():
+    config = load_config()
+    mode = config.get("mode", "beginner")
+    level = config.get("level", 1)
+    unlocked = config.get("unlocked_tools", [])
+    
+    all_tools = [
+        ("network_info", "Сетевая информация", 1),
+        ("port_check", "Проверка портов", 1),
+        ("web_scanner", "Веб-сканер", 2),
+        ("ssl_checker", "Проверка SSL", 3),
+        ("whois_checker", "WHOIS информация", 4),
+        ("dir_buster", "Поиск директорий", 5),
+        ("subdomain_scanner", "Поиск субдоменов", 6),
+        ("cve_lookup", "Поиск уязвимостей", 7),
+        ("hash_cracker", "Взлом хешей", 8),
+        ("sql_tester", "Тест SQL инъекций", 9),
+        ("xss_scanner", "Поиск XSS", 10),
+        ("api_fuzzer", "Фаззинг API", 10)
+    ]
+    
+    print("="*60)
+    print(f"{Colors.BOLD}🛠️  ИНСТРУМЕНТЫ HACKLAB MANAGER{Colors.END}")
+    print("="*60)
+    
+    if mode == "professional":
+        print(f"{Colors.RED}🔥 ПРОФЕССИОНАЛЬНЫЙ РЕЖИМ{Colors.END}")
+        print(f"{Colors.GREEN}✅ Все инструменты доступны!{Colors.END}\n")
+        
+        for tool_id, tool_name, req_level in all_tools:
+            print(f"  ✅ {tool_name} ({tool_id})")
+    
+    else:
+        print(f"{Colors.GREEN}🎓 НОВИЧОК (Уровень {level}){Colors.END}\n")
+        
+        print(f"{Colors.CYAN}✅ РАЗБЛОКИРОВАНЫ:{Colors.END}")
+        for tool_id, tool_name, req_level in all_tools:
+            if tool_id in unlocked:
+                print(f"  ✅ {tool_name}")
+        
+        if level < 10:
+            print(f"\n{Colors.YELLOW}🔒 БУДУТ РАЗБЛОКИРОВАНЫ:{Colors.END}")
+            for tool_id, tool_name, req_level in all_tools:
+                if tool_id not in unlocked and req_level <= 10:
+                    status = f"(Уровень {req_level})"
+                    if req_level <= level + 1:
+                        print(f"  🔓 {tool_name} {status}")
+                    else:
+                        print(f"  🔒 {tool_name} {status}")
+    
+    print(f"\n{Colors.BOLD}Использование:{Colors.END}")
+    print(f"  hl scan <цель> --tool <имя_инструмента>")
+    print(f"  Пример: hl scan example.com --tool web_scanner")
+    print("="*60)
+
+def cmd_mode(new_mode):
+    config = load_config()
+    current_mode = config.get("mode", "beginner")
+    
+    if new_mode == "beg":
+        new_mode = "beginner"
+    elif new_mode == "pro":
+        new_mode = "professional"
+    
+    if new_mode not in ["beginner", "professional"]:
+        print(f"{Colors.RED}❌ Используйте: hl mode beginner или hl mode professional{Colors.END}")
+        return
+    
+    if current_mode == new_mode:
+        print(f"{Colors.YELLOW}ℹ️  Вы уже в режиме {new_mode}{Colors.END}")
+        return
+    
+    if current_mode == "beginner" and new_mode == "professional":
+        level = config.get("level", 1)
+        if level < 10:
+            print(f"{Colors.RED}❌ Требуется 10 уровень для перехода в Профессиональный режим{Colors.END}")
+            print(f"   {Colors.YELLOW}Ваш уровень: {level}{Colors.END}")
+            print(f"   {Colors.CYAN}💡 Продолжайте обучение: hl learn{Colors.END}")
+            return
+        
+        print("="*60)
+        print(f"{Colors.RED}🚀 ПЕРЕХОД В ПРОФЕССИОНАЛЬНЫЙ РЕЖИМ{Colors.END}")
+        print("="*60)
+        print(f"{Colors.YELLOW}Вы достигли 10 уровня и готовы к Про-режиму!{Colors.END}")
+        print()
+        print(f"{Colors.RED}⚠️  ВНИМАНИЕ: В Про-режиме:{Colors.END}")
+        print(f"   • {Colors.RED}Нет ограничений по целям{Colors.END}")
+        print(f"   • {Colors.RED}Нет автоматических подсказок{Colors.END}")
+        print(f"   • {Colors.RED}Ответственность за действия только на вас{Colors.END}")
+        print()
+        confirm = input(f"{Colors.YELLOW}Подтвердите переход (yes/no): {Colors.END}").strip().lower()
+        
+        if confirm not in ["yes", "y", "да", "д"]:
+            print(f"{Colors.YELLOW}❌ Переход отменен{Colors.END}")
+            return
+        
+        # Разблокируем все инструменты
+        config["unlocked_tools"] = [
+            "network_info", "port_check", "web_scanner", 
+            "ssl_checker", "whois_checker", "dir_buster",
+            "subdomain_scanner", "cve_lookup", "hash_cracker",
+            "sql_tester", "xss_scanner", "api_fuzzer"
+        ]
+    
+    config["mode"] = new_mode
+    save_config(config)
+    
+    mode_display = f"{Colors.GREEN}НОВИЧОК{Colors.END}" if new_mode == "beginner" else f"{Colors.RED}ПРОФЕССИОНАЛ{Colors.END}"
+    print(f"{Colors.GREEN}✅ Режим изменен: {mode_display}{Colors.END}")
+
+def cmd_learn():
+    learn_script = os.path.join(BASE_DIR, "learn.py")
+    if os.path.exists(learn_script):
+        print(f"{Colors.BLUE}📚 Запускаю систему обучения...{Colors.END}")
+        subprocess.run(["python3", learn_script])
+    else:
+        print(f"{Colors.RED}❌ Файл обучения не найден{Colors.END}")
+        print(f"{Colors.YELLOW}Создайте learn.py в папке hacklab_v2{Colors.END}")
+
+def cmd_premium():
+    print("="*60)
+    print(f"{Colors.BOLD}💰 HACKLAB MANAGER PREMIUM{Colors.END}")
+    print("="*60)
+    print(f"{Colors.MAGENTA}Доступно за $15/месяц или $150/год{Colors.END}")
+    print()
+    print(f"{Colors.GREEN}🔥 PREMIUM ФИЧИ:{Colors.END}")
+    print(f"  • HTB API интеграция (авто-импорт машин)")
+    print(f"  • Shodan поиск (поиск уязвимых систем)")
+    print(f"  • PDF отчеты (профессиональные для клиентов)")
+    print(f"  • Автоматизация (скрипты и планировщик)")
+    print(f"  • Приоритетная поддержка")
+    print()
+    print(f"{Colors.CYAN}💡 БИЗНЕС-МОДЕЛЬ:{Colors.END}")
+    print(f"  Бесплатно: Новичок режим (10 инструментов, обучение)")
+    print(f"  Premium: $15/месяц (20+ инструментов, API, авто-отчеты)")
+    print(f"  Team: $49/месяц (до 5 пользователей, коллаборация)")
+    print()
+    print(f"{Colors.YELLOW}🎯 ЦЕЛЬ: 100 Premium пользователей = $1500/месяц{Colors.END}")
+    print()
+    print(f"{Colors.BOLD}💳 Для покупки посетите:{Colors.END}")
+    print(f"   https://hacklab-manager.com/premium")
+    print(f"   Промокод: {Colors.GREEN}TRYHACKLAB{Colors.END}")
+    print("="*60)
+
+def cmd_help():
+    show_welcome()
+
+def main():
+    # Проверяем первый запуск
+    if not os.path.exists(CONFIG_FILE):
+        first_run()
+        show_welcome()
+        return
+    
+    # Проверяем аргументы
+    if len(sys.argv) < 2:
+        show_welcome()
+        return
+    
+    command = sys.argv[1]
+    
+    if command == "scan":
+        if len(sys.argv) < 3:
+            print(f"{Colors.RED}❌ Укажите цель для сканирования{Colors.END}")
+            print(f"{Colors.YELLOW}Пример: hl scan scanme.nmap.org{Colors.END}")
+            return
+        
+        target = sys.argv[2]
+        tool_name = None
+        
+        # Проверяем наличие --tool
+        if "--tool" in sys.argv:
+            tool_index = sys.argv.index("--tool")
+            if tool_index + 1 < len(sys.argv):
+                tool_name = sys.argv[tool_index + 1]
+        
+        cmd_scan(target, tool_name)
+    
+    elif command == "dashboard":
+        cmd_dashboard()
+    
+    elif command == "mode":
+        if len(sys.argv) < 3:
+            print(f"{Colors.RED}❌ Укажите режим: beginner или professional{Colors.END}")
+            return
+        cmd_mode(sys.argv[2])
+    
+    elif command == "tools":
+        cmd_tools()
+    
+    elif command == "level":
+        config = load_config()
+        level = config.get("level", 1)
+        xp = config.get("xp", 0)
+        print(f"{Colors.CYAN}🎮 Ваш уровень: {level}{Colors.END}")
+        print(f"{Colors.YELLOW}⭐ XP: {xp}{Colors.END}")
+        
+        if config.get("mode") == "beginner" and level < 10:
+            xp_needed = [0, 100, 250, 500, 850, 1300, 1850, 2500, 3250, 4100]
+            needed = xp_needed[level] - xp
+            print(f"{Colors.GREEN}📈 До следующего уровня нужно: {needed} XP{Colors.END}")
+    
+    elif command == "premium":
+        cmd_premium()
+    
+    elif command == "learn":
+        cmd_learn()
+    
+    elif command == "help":
+        cmd_help()
+    
+    else:
+        print(f"{Colors.RED}❌ Команда '{command}' не найдена{Colors.END}")
+        cmd_help()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}👋 Выход из HackLab Manager{Colors.END}")
+        sys.exit(0)
+    except Exception as e:
+        print(f"{Colors.RED}❌ Критическая ошибка: {e}{Colors.END}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
