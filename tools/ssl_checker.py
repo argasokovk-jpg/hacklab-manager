@@ -1,96 +1,66 @@
-#!/usr/bin/env python3
 import ssl
 import socket
 from datetime import datetime
-from tool_base import ToolBase
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-class SslChecker(ToolBase):
-    def run(self, target):
-        results = {
-            'target': target,
-            'port': 443,
-            'has_ssl': False,
-            'valid': False,
-            'days_left': 0,
-            'cert_info': {},
-            'warnings': []
-        }
+try:
+    from core.action_logger import ActionLogger
+    LOG_ENABLED = True
+except ImportError:
+    LOG_ENABLED = False
+
+def check_ssl(domain):
+    if LOG_ENABLED:
+        logger = ActionLogger()
+        logger.log_action(1, "ssl_check", "ssl_checker", domain)
+    
+    print(f"Проверка SSL для: {domain}")
+    
+    try:
+        # Добавляем порт если нет
+        if ":" not in domain:
+            hostname = domain
+            port = 443
+        else:
+            hostname, port_str = domain.split(":")
+            port = int(port_str)
         
-        try:
-            hostname = target.replace('http://', '').replace('https://', '').split('/')[0]
-            
-            print(f"🔐 Проверка SSL для {hostname}:443")
-            print("=" * 40)
-            
-            context = ssl.create_default_context()
-            
-            with socket.create_connection((hostname, 443), timeout=10) as sock:
-                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                    cert = ssock.getpeercert()
-                    
-                    results['has_ssl'] = True
-                    results['cert_info'] = cert
-                    
-                    print(f"✅ SSL сертификат найден")
-                    print(f"📅 Действует до: {cert['notAfter']}")
-                    
-                    expiry_date = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
-                    days_left = (expiry_date - datetime.now()).days
-                    
-                    results['days_left'] = days_left
-                    results['valid'] = days_left > 0
-                    
-                    if days_left > 30:
-                        print(f"📊 Срок действия: {days_left} дней (норма)")
-                        results['status'] = 'valid'
-                    elif days_left > 0:
-                        print(f"⚠️  Срок действия: {days_left} дней (скоро истекает!)")
-                        results['status'] = 'expiring'
-                        results['warnings'].append(f"Сертификат истекает через {days_left} дней")
-                    else:
-                        print(f"❌ Срок действия: ИСТЕК {-days_left} дней назад!")
-                        results['status'] = 'expired'
-                        results['warnings'].append(f"Сертификат просрочен на {-days_left} дней")
-                    
-                    issuer = dict(x[0] for x in cert['issuer'])
-                    subject = dict(x[0] for x in cert['subject'])
-                    
-                    print(f"\n📝 ИНФОРМАЦИЯ О СЕРТИФИКАТЕ:")
-                    print(f"  • Издатель: {issuer.get('organizationName', 'Unknown')}")
-                    print(f"  • Владелец: {subject.get('commonName', 'Unknown')}")
-                    
-                    results['issuer'] = issuer
-                    results['subject'] = subject
-                    
-                    return results
-        
-        except socket.timeout:
-            error_msg = "Таймаут соединения"
-            print(f"❌ {error_msg}")
-            results['error'] = error_msg
-            return results
-        except ConnectionRefusedError:
-            error_msg = "Соединение отклонено"
-            print(f"❌ {error_msg}")
-            results['error'] = error_msg
-            return results
-        except ssl.SSLError as e:
-            error_msg = f"SSL ошибка: {e}"
-            print(f"❌ {error_msg}")
-            results['error'] = error_msg
-            results['has_ssl'] = False
-            return results
-        except Exception as e:
-            error_msg = f"Ошибка: {e}"
-            print(f"❌ {error_msg}")
-            results['error'] = error_msg
-            return results
+        context = ssl.create_default_context()
+        with socket.create_connection((hostname, port), timeout=10) as sock:
+            with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                cert = ssock.getpeercert()
+                
+                # Информация о сертификате
+                print("✅ SSL сертификат найден")
+                
+                # Срок действия
+                if 'notBefore' in cert and 'notAfter' in cert:
+                    not_before = cert['notBefore']
+                    not_after = cert['notAfter']
+                    print(f"   Действует с: {not_before}")
+                    print(f"   Действует до: {not_after}")
+                
+                # Издатель
+                if 'issuer' in cert:
+                    issuer = cert['issuer']
+                    issuer_str = ''
+                    for item in issuer:
+                        for key, value in item:
+                            issuer_str += f"{key}={value}, "
+                    print(f"   Издатель: {issuer_str.rstrip(', ')}")
+                
+                return {"status": "valid", "certificate": cert}
+                
+    except ssl.SSLError as e:
+        print(f"❌ Ошибка SSL: {e}")
+        return {"status": "error", "message": str(e)}
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) != 2:
-        print("Использование: python ssl_checker.py <hostname>")
-        sys.exit(1)
-    
-    checker = SslChecker()
-    checker.run(sys.argv[1])
+    domain = sys.argv[1] if len(sys.argv) > 1 else "google.com"
+    check_ssl(domain)

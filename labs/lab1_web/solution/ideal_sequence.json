@@ -1,0 +1,9 @@
+[
+  {"action": "recon", "tool": "whois_checker", "target": "testfire.net"},
+  {"action": "recon", "tool": "network_info", "target": "testfire.net"},
+  {"action": "scan", "tool": "port_check", "target": "testfire.net", "params": "80,443"},
+  {"action": "web_scan", "tool": "web_scanner", "target": "http://testfire.net"},
+  {"action": "dir_scan", "tool": "dir_buster", "target": "http://testfire.net"},
+  {"action": "vuln_test", "tool": "sql_tester", "target": "http://testfire.net"},
+  {"action": "vuln_test", "tool": "xss_scanner", "target": "http://testfire.net"}
+]

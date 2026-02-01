@@ -172,6 +172,7 @@ def show_welcome():
     print(f"  {Colors.CYAN}hl tools{Colors.END}            - Инструменты")
     print(f"  {Colors.CYAN}hl mode [beg/pro]{Colors.END}   - Сменить режим")
     print(f"  {Colors.CYAN}hl learn{Colors.END}            - Обучение")
+    print(f"  {Colors.CYAN}hl analyze{Colors.END}          - Анализ твоего подхода")
     print(f"  {Colors.CYAN}hl premium{Colors.END}          - Premium информация")
     print(f"  {Colors.CYAN}hl help{Colors.END}             - Справка")
     print()
@@ -492,6 +493,96 @@ def cmd_learn():
         print(f"{Colors.RED}❌ Файл обучения не найден{Colors.END}")
         print(f"{Colors.YELLOW}Создайте learn.py в папке hacklab_v2{Colors.END}")
 
+def cmd_analyze():
+    """Анализ действий пользователя"""
+    print(f"{Colors.BLUE}🧠 Анализирую твой подход...{Colors.END}")
+    print(f"DEBUG: BASE_DIR = {BASE_DIR}")  # Добавить эту строку
+    print(f"DEBUG: analyzer.py exists = {os.path.exists(os.path.join(BASE_DIR, 'core', 'analyzer.py'))}")  # И эту
+    # Просто запускаем анализатор напрямую
+    import sys
+    sys.path.insert(0, BASE_DIR)
+    from core.analyzer import ThinkingAnalyzer
+    analyzer = ThinkingAnalyzer()
+    analyzer.print_report()
+
+def cmd_lab():
+    """Управление лабораториями"""
+    if len(sys.argv) < 3:
+        print(f"\n{Colors.BOLD}📚 КОМАНДЫ LAB:{Colors.END}")
+        print(f"  {Colors.CYAN}hl lab list{Colors.END}          - Список лабораторий")
+        print(f"  {Colors.CYAN}hl lab start <id>{Colors.END}    - Начать лабораторию")
+        print(f"  {Colors.CYAN}hl lab info <id>{Colors.END}     - Информация о lab")
+        print(f"  {Colors.CYAN}hl lab progress <id>{Colors.END} - Прогресс выполнения")
+        print(f"  {Colors.CYAN}hl lab finish <id>{Colors.END}   - Завершить и получить отчет")
+        return
+    
+    subcommand = sys.argv[2]
+    
+    if subcommand == "list":
+        print(f"\n{Colors.BOLD}📚 ДОСТУПНЫЕ ЛАБОРАТОРИИ:{Colors.END}")
+        print(f"  {Colors.GREEN}1. Web Pentest Basics{Colors.END}")
+        print(f"     Цель: testfire.net")
+        print(f"     Инструменты: 7 из 12")
+        print(f"     Сложность: 🟢 Легкая")
+        print(f"     Статус: {Colors.GREEN}Доступна{Colors.END}")
+        
+        print(f"\n  {Colors.YELLOW}2. Network Reconnaissance{Colors.END}")
+        print(f"     Цель: scanme.nmap.org")
+        print(f"     Инструменты: 8 из 12")
+        print(f"     Сложность: 🟡 Средняя")
+        print(f"     Статус: {Colors.GREEN}Доступна{Colors.END}")
+        
+        print(f"\n  {Colors.RED}3. Full Penetration Test{Colors.END}")
+        print(f"     Цель: multiple targets")
+        print(f"     Инструменты: все 12")
+        print(f"     Сложность: 🔴 Сложная")
+        print(f"     Статус: {Colors.YELLOW}Premium{Colors.END}")
+        
+    elif subcommand == "start":
+        if len(sys.argv) < 4:
+            print(f"{Colors.RED}❌ Укажите ID лаборатории{Colors.END}")
+            print(f"{Colors.YELLOW}Пример: hl lab start 1{Colors.END}")
+            return
+        
+        lab_id = sys.argv[3]
+        
+        if lab_id == "1":
+            print(f"\n{Colors.GREEN}🚀 НАЧИНАЕМ LAB 1: Web Pentest Basics{Colors.END}")
+            print("="*50)
+            
+            # Показываем описание
+            desc_path = os.path.join(BASE_DIR, "labs", "lab1_web", "description.md")
+            if os.path.exists(desc_path):
+                with open(desc_path, 'r') as f:
+                    print(f.read())
+            
+            print(f"\n{Colors.YELLOW}💡 Для начала используй:{Colors.END}")
+            print(f"  hl tool whois_checker testfire.net")
+            print(f"  или")
+            print(f"  python3 tools/whois_checker.py testfire.net")
+            
+            # Устанавливаем lab_id для логгера
+            try:
+                from core.action_logger import logger
+                logger.set_context(lab_id=int(lab_id))
+                print(f"\n{Colors.GREEN}✅ Контекст установлен: Lab {lab_id}{Colors.END}")
+            except:
+                print(f"\n{Colors.YELLOW}⚠️  Логгер не инициализирован{Colors.END}")
+                
+        else:
+            print(f"{Colors.RED}❌ Lab {lab_id} еще не готова{Colors.END}")
+    
+    elif subcommand == "info":
+        if len(sys.argv) < 4:
+            print(f"{Colors.RED}❌ Укажите ID лаборатории{Colors.END}")
+            return
+        
+        lab_id = sys.argv[3]
+        print(f"{Colors.BLUE}📖 Информация о Lab {lab_id}{Colors.END}")
+        
+    else:
+        print(f"{Colors.RED}❌ Неизвестная команда: {subcommand}{Colors.END}")
+
 def cmd_premium():
     print("="*60)
     print(f"{Colors.BOLD}💰 HACKLAB MANAGER PREMIUM{Colors.END}")
@@ -516,6 +607,16 @@ def cmd_premium():
     print(f"   https://hacklab-manager.com/premium")
     print(f"   Промокод: {Colors.GREEN}TRYHACKLAB{Colors.END}")
     print("="*60)
+
+def main():
+    # ОТЛАДКА: покажем что пришло
+    print(f"DEBUG: sys.argv = {sys.argv}")
+    
+    # Проверяем первый запуск
+    if not os.path.exists(CONFIG_FILE):
+        first_run()
+        show_welcome()
+        return
 
 def cmd_help():
     show_welcome()
@@ -575,11 +676,17 @@ def main():
             needed = xp_needed[level] - xp
             print(f"{Colors.GREEN}📈 До следующего уровня нужно: {needed} XP{Colors.END}")
     
-    elif command == "premium":
-        cmd_premium()
-    
     elif command == "learn":
         cmd_learn()
+    
+    elif command == "analyze":
+        cmd_analyze()
+    
+    elif command == "lab":
+        cmd_lab()
+
+    elif command == "premium":
+        cmd_premium()
     
     elif command == "help":
         cmd_help()

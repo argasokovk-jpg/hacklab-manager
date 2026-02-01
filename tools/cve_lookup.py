@@ -1,96 +1,36 @@
-#!/usr/bin/env python3
-import requests
-import json
-from tool_base import ToolBase
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-class CVELookup(ToolBase):
-    def run(self, search_term):
-        results = {
-            'search_term': search_term,
-            'cves': [],
-            'error': None
-        }
-        
-        print(f"🔍 Поиск CVE уязвимостей для: {search_term}")
-        print("=" * 40)
-        
-        try:
-            if search_term.upper().startswith('CVE-'):
-                cve_id = search_term.upper()
-                url = f"https://cve.circl.lu/api/cve/{cve_id}"
-                
-                response = requests.get(url, timeout=10)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    print(f"✅ Найдена уязвимость: {cve_id}")
-                    print(f"📝 Описание: {data.get('summary', 'Нет описания')}")
-                    
-                    cvss = data.get('cvss', None)
-                    if cvss:
-                        print(f"📊 CVSS Score: {cvss}")
-                        if float(cvss) >= 7.0:
-                            print(f"⚠️  ВЫСОКИЙ РИСК: {cvss}")
-                        elif float(cvss) >= 4.0:
-                            print(f"⚠️  СРЕДНИЙ РИСК: {cvss}")
-                        else:
-                            print(f"✅ НИЗКИЙ РИСК: {cvss}")
-                    
-                    results['cves'].append(data)
-                    
-                else:
-                    print(f"❌ CVE {cve_id} не найдена")
-                    results['error'] = f"CVE {cve_id} not found"
-            else:
-                url = f"https://cve.circl.lu/api/search/{search_term}"
-                response = requests.get(url, timeout=10)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    if data:
-                        print(f"✅ Найдено уязвимостей: {len(data)}")
-                        
-                        for cve in data[:5]:
-                            cve_id = cve.get('id', 'Unknown')
-                            summary = cve.get('summary', 'Нет описания')
-                            cvss = cve.get('cvss', 'N/A')
-                            
-                            print(f"\n📌 {cve_id}")
-                            print(f"   Описание: {summary[:100]}...")
-                            print(f"   CVSS: {cvss}")
-                        
-                        if len(data) > 5:
-                            print(f"\n💡 Показано 5 из {len(data)} уязвимостей")
-                        
-                        results['cves'] = data
-                    else:
-                        print(f"❌ Уязвимости для '{search_term}' не найдены")
-                        results['error'] = "No vulnerabilities found"
-                else:
-                    print(f"❌ Ошибка API: {response.status_code}")
-                    results['error'] = f"API error: {response.status_code}"
-        
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Ошибка сети: {e}")
-            results['error'] = str(e)
-        except json.JSONDecodeError as e:
-            print(f"❌ Ошибка данных: {e}")
-            results['error'] = str(e)
-        
-        print(f"\n💡 РЕКОМЕНДАЦИИ:")
-        print(f"  • Регулярно обновляйте ПО")
-        print(f"  • Мониторьте security advisories")
-        print(f"  • Используйте vulnerability scanners")
-        
-        return results
+try:
+    from core.action_logger import ActionLogger
+    LOG_ENABLED = True
+except ImportError:
+    LOG_ENABLED = False
+
+def search_cve(query):
+    if LOG_ENABLED:
+        logger = ActionLogger()
+        logger.log_action(1, "cve_search", "cve_lookup", query)
+    
+    print(f"Поиск уязвимостей CVE для: {query}")
+    
+    # Демо данные
+    cve_list = [
+        {"id": "CVE-2023-12345", "description": "SQL Injection в системе управления", "score": 7.5},
+        {"id": "CVE-2023-12346", "description": "XSS в веб-интерфейсе", "score": 6.8},
+        {"id": "CVE-2023-12347", "description": "Buffer Overflow в сервисе", "score": 8.2},
+    ]
+    
+    for cve in cve_list:
+        print(f"\n🔴 {cve['id']}")
+        print(f"   Описание: {cve['description']}")
+        print(f"   CVSS Score: {cve['score']}")
+    
+    print(f"\nНайдено уязвимостей: {len(cve_list)}")
+    return cve_list
 
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) != 2:
-        print("Использование: python cve_lookup.py <search_term>")
-        sys.exit(1)
-    
-    lookup = CVELookup()
-    lookup.run(sys.argv[1])
+    query = sys.argv[1] if len(sys.argv) > 1 else "web server"
+    search_cve(query)
