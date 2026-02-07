@@ -101,7 +101,7 @@ class ThinkingAnalyzer:
         recs = []
         
         if "network_info" in tools_used and "port_check" in tools_used:
-            recs.append("✅ Отличная последовательность: разведка → сканирование портов")
+            recs.append("[+] Отличная последовательность: разведка → сканирование портов")
         
         if "web_scanner" not in tools_used:
             recs.append("➡️ Попробуй web_scanner для сканирования веб-уязвимостей")

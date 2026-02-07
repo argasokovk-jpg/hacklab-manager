@@ -1,4 +1,4 @@
-# HackLab Manager v2.0
+# HackLab Manager v2.2
 
 Простой запуск:
 1. Скачай hacklab_manager.zip

@@ -7,7 +7,17 @@ import importlib.util
 from datetime import datetime
 from pathlib import Path
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import os
+# Получаем реальный путь к файлу (разрешаем символические ссылки)
+real_path = os.path.realpath(__file__)
+BASE_DIR = os.path.dirname(real_path)
+
+# Если мы в .local/bin, используем правильный путь к проекту
+if BASE_DIR.endswith('.local/bin'):
+    BASE_DIR = os.path.expanduser('~/hacklab_v2')
+
+TOOLS_DIR = os.path.join(BASE_DIR, "tools")
+
 TOOLS_DIR = os.path.join(BASE_DIR, "tools")
 CONFIG_DIR = os.path.expanduser("~/.hacklab")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
@@ -95,7 +105,7 @@ def check_level_up(config):
 
 def first_run():
     print("="*60)
-    print(f"{Colors.BOLD}🚀 HACKLAB MANAGER v2.0{Colors.END}")
+    print(f"{Colors.BOLD}🚀 HACKLAB MANAGER v2.2{Colors.END}")
     print("="*60)
     print()
     print(f"{Colors.BOLD}Выберите ваш уровень:{Colors.END}")
@@ -155,7 +165,7 @@ def show_welcome():
     xp = config.get("xp", 0)
     
     print("="*60)
-    print(f"{Colors.BOLD}🚀 HACKLAB MANAGER v2.0{Colors.END}")
+    print(f"{Colors.BOLD}🚀 HACKLAB MANAGER v2.2{Colors.END}")
     print("="*60)
     
     mode_display = f"{Colors.GREEN}НОВИЧОК{Colors.END}" if mode == "beginner" else f"{Colors.RED}ПРОФЕССИОНАЛ{Colors.END}"
@@ -192,6 +202,7 @@ def show_welcome():
     print("="*60)
 
 def load_tool_module(tool_name):
+    
     tool_path = os.path.join(TOOLS_DIR, f"{tool_name}.py")
     
     if not os.path.exists(tool_path):
@@ -211,24 +222,20 @@ def load_tool_module(tool_name):
         # Выполняем модуль
         spec.loader.exec_module(module)
         
-        # Ищем класс с правильным именем
-        # Формируем имя класса: network_info -> NetworkInfo
-        class_name = ''.join(word.capitalize() for word in tool_name.split('_'))
+        func_names = ['run', 'scan', f'{tool_name}', f'scan_{tool_name}', 
+              'get_network_info', 'scan_ports', 'check_ssl', 'whois_lookup',
+              'scan_website', 'scan_directories', 'find_subdomains',
+              'test_sql_injection', 'scan_xss', 'fuzz_api']
         
-        # Проверяем наличие класса
-        if hasattr(module, class_name):
-            tool_class = getattr(module, class_name)
-            return tool_class()
-        else:
-            # Пробуем найти любой класс в модуле
-            for attr_name in dir(module):
-                attr = getattr(module, attr_name)
-                if isinstance(attr, type) and attr.__module__ == module.__name__:
-                    print(f"{Colors.YELLOW}⚠️  Найден класс: {attr_name} (ожидался: {class_name}){Colors.END}")
-                    return attr()
-            
-            print(f"{Colors.RED}❌ Не найден класс в модуле {tool_name}{Colors.END}")
-            return None
+        for func_name in func_names:
+            if hasattr(module, func_name):
+                func = getattr(module, func_name)
+                if callable(func):
+                    return func
+        
+        # Если не нашли, возвращаем модуль
+        print(f"{Colors.YELLOW}⚠️  Не найдена функция, возвращаю модуль{Colors.END}")
+        return module
             
     except Exception as e:
         print(f"{Colors.RED}❌ Ошибка загрузки инструмента {tool_name}: {e}{Colors.END}")
@@ -281,7 +288,7 @@ def cmd_scan(target, tool_name=None):
         
         if tool:
             try:
-                result = tool.run(target)
+                result = tool(target)
                 
                 # Добавляем XP
                 if mode == "beginner":
@@ -583,6 +590,68 @@ def cmd_lab():
     else:
         print(f"{Colors.RED}❌ Неизвестная команда: {subcommand}{Colors.END}")
 
+def cmd_report():
+    """Генерация PDF отчетов"""
+    if len(sys.argv) < 3:
+        print(f"\n{Colors.BOLD}📊 PDF ОТЧЕТЫ:{Colors.END}")
+        print(f"  {Colors.CYAN}hl report lab <id>{Colors.END}    - Отчет по лаборатории")
+        print(f"  {Colors.CYAN}hl report list{Colors.END}        - Список отчетов")
+        return
+    
+    subcommand = sys.argv[2]
+    
+    if subcommand == "lab":
+        if len(sys.argv) < 4:
+            print(f"{Colors.RED}❌ Укажите ID лаборатории{Colors.END}")
+            return
+        
+        lab_id = sys.argv[3]
+        print(f"{Colors.BLUE}📊 Генерирую отчет для Lab {lab_id}...{Colors.END}")
+        
+        try:
+            sys.path.insert(0, BASE_DIR)
+            from core.analyzer import ThinkingAnalyzer
+            from reports.generator import PDFGenerator            
+            analyzer = ThinkingAnalyzer()
+            analysis = analyzer.analyze_sequence(lab_id=int(lab_id))
+            sequence = analyzer.get_actions(lab_id=int(lab_id))
+
+            config = load_config()
+            username = config.get('username', 'hacker')
+
+            generator = PDFGenerator(username=username)
+
+            analysis_data = {
+               'score': analysis.get('score', 0),
+               'level': analysis.get('level', 'Beginner'),
+               'tools_used': analysis.get('tools_used', []),
+               'recommendations': analysis.get('recommendations', [])
+            }
+
+            report_path = generator.generate_lab_report(lab_id, analysis_data, sequence)            
+
+            print(f"\n{Colors.GREEN}✅ Отчет создан!{Colors.END}")
+            print(f"📁 Файл: {Colors.CYAN}{report_path}{Colors.END}")
+            
+        except Exception as e:
+            print(f"{Colors.RED}❌ Ошибка: {e}{Colors.END}")
+    
+    elif subcommand == "list":
+        reports_dir = os.path.expanduser("~/.hacklab/reports")
+        if os.path.exists(reports_dir):
+            files = [f for f in os.listdir(reports_dir) if f.endswith('.pdf')]
+            if files:
+                print(f"{Colors.BLUE}📁 Ваши PDF отчеты:{Colors.END}")
+                for file in sorted(files, reverse=True):
+                    print(f"  • {Colors.CYAN}{file}{Colors.END}")
+            else:
+                print(f"{Colors.YELLOW}📭 Нет созданных отчетов{Colors.END}")
+        else:
+            print(f"{Colors.YELLOW}📭 Папка отчетов не создана{Colors.END}")
+    
+    else:
+        print(f"{Colors.RED}❌ Неизвестная команда: {subcommand}{Colors.END}")
+
 def cmd_premium():
     print("="*60)
     print(f"{Colors.BOLD}💰 HACKLAB MANAGER PREMIUM{Colors.END}")
@@ -684,6 +753,9 @@ def main():
     
     elif command == "lab":
         cmd_lab()
+
+    elif command == "report":
+        cmd_report()
 
     elif command == "premium":
         cmd_premium()
