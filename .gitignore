@@ -1,24 +1,42 @@
+# Virtual Environment
+venv/
+.env
+.env.local
+
 # Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
+*.so
 
-# Пользовательские данные
-.hacklab/
-*.key
-*.env
+# Database
+*.db
+*.sqlite3
+*.db-journal
+
+# Logs
 *.log
-config.json
+logs/
 
-# Системные файлы
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System
 .DS_Store
 Thumbs.db
 
-# Архивы
-*.zip
-*.tar.gz
+# HackLab specific
+~/.hacklab/  # локальные конфиги пользователя
+data/
+wordlists/  # если пустая
+modules/    # если пустая
 
 # Временные файлы
-*.tmp
-*.temp
+tmp/
+temp/
+venv/

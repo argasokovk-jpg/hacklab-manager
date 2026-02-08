@@ -1,0 +1,45 @@
+{
+  "lab_id": "lab2_network",
+  "target": "scanme.nmap.org",
+  "ideal_sequence": [
+    {
+      "stage": "Разведка",
+      "order": 1,
+      "actions": [
+        "network_info scanme.nmap.org",
+        "whois_checker scanme.nmap.org"
+      ],
+      "reason": "Сначала понимаем сетевой контекст и владельца цели"
+    },
+    {
+      "stage": "Сканирование портов",
+      "order": 2,
+      "actions": [
+        "port_check scanme.nmap.org"
+      ],
+      "reason": "После разведки сканируем порты с пониманием контекста"
+    },
+    {
+      "stage": "Анализ сервисов",
+      "order": 3,
+      "actions": [
+        "ssl_checker scanme.nmap.org",
+        "web_scanner scanme.nmap.org"
+      ],
+      "reason": "Для найденных портов 80/443 анализируем сервисы"
+    },
+    {
+      "stage": "Поиск уязвимостей",
+      "order": 4,
+      "actions": [
+        "cve_lookup для найденных сервисов"
+      ],
+      "reason": "Ищем уязвимости для конкретных сервисов и версий"
+    }
+  ],
+  "thinking_points": [
+    "network_info первым - понимаем где цель перед сканированием",
+    "dir_buster не нужен на этапе сканирования - сначала анализ сервисов",
+    "Каждый порт связан с конкретными сервисами и уязвимостями"
+  ]
+}

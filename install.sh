@@ -1,109 +1,78 @@
 #!/bin/bash
-# HackLab Manager Installer v2.1
 
 set -e
 
-echo "🚀 HackLab Manager v2.1 - Установка"
-echo "=========================================="
-
-# Цвета для вывода
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+echo "🚀 HackLab Manager v2.3 Installer"
+echo "=================================="
 
 # Проверка Python
-echo -e "${BLUE}🔍 Проверка зависимостей...${NC}"
 if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}❌ Python3 не установлен${NC}"
+    echo "❌ Python3 не установлен. Установите: sudo apt install python3"
     exit 1
 fi
 
 # Создаем директории
-echo -e "${BLUE}📁 Создание структуры...${NC}"
+echo "📁 Создаем структуру каталогов..."
 mkdir -p ~/.hacklab
+mkdir -p ~/.local/bin
+
+# Копируем файлы
+echo "📦 Копируем файлы..."
+
+# Основные файлы
+cp hl ~/.local/bin/hl
+chmod +x ~/.local/bin/hl
+
+# Ядро системы
+mkdir -p ~/.hacklab/core
+cp core/*.py ~/.hacklab/core/ 2>/dev/null || echo "⚠️  Core файлы не найдены"
+
+# Инструменты
 mkdir -p ~/.hacklab/tools
+cp tools/*.py ~/.hacklab/tools/ 2>/dev/null || echo "⚠️  Tools не найдены"
+
+# Лаборатории (включая новую Lab 2)
+mkdir -p ~/.hacklab/labs
+cp -r labs/* ~/.hacklab/labs/ 2>/dev/null || echo "⚠️  Лаборатории не найдены"
+
+# Обучение
+cp learn.py ~/.hacklab/ 2>/dev/null || echo "⚠️  learn.py не найден"
+
+# Отчеты
 mkdir -p ~/.hacklab/reports
-mkdir -p ~/.local/bin 2>/dev/null || true
+cp reports/*.py ~/.hacklab/reports/ 2>/dev/null || echo "⚠️  Reports не найдены"
 
-# Копируем основные файлы
-echo -e "${BLUE}📁 Копирование файлов...${NC}"
-
-# Копируем ядро системы
-if [ -d "core" ]; then
-    cp -r core ~/.hacklab/
+# Конфигурация
+if [ ! -f ~/.hacklab/config.json ]; then
+    echo '{"mode": "beginner", "level": 1, "xp": 0, "unlocked_tools": ["network_info", "port_check"]}' > ~/.hacklab/config.json
 fi
 
-# Копируем инструменты (ВАЖНО: правильный путь)
-if [ -d "tools" ]; then
-    cp -r tools/* ~/.hacklab/tools/
-fi
+# Устанавливаем зависимости
+echo "📦 Устанавливаем зависимости Python..."
+pip3 install -q requests reportlab colorama
 
-# Копируем базу данных
-if [ -d "db" ]; then
-    cp -r db ~/.hacklab/
-fi
-
-# Копируем лаборатории
-if [ -d "labs" ]; then
-    cp -r labs ~/.hacklab/
-fi
-
-# Копируем hl скрипт и исправляем пути
-echo -e "${BLUE}⚙️  Настройка CLI...${NC}"
-if [ -f "hl" ]; then
-    cp hl ~/.hacklab/
-    chmod +x ~/.hacklab/hl
-    
-    # Исправляем BASE_DIR в скопированном hl
-    sed -i "s|BASE_DIR =.*|BASE_DIR = os.path.expanduser('~/.hacklab')|" ~/.hacklab/hl 2>/dev/null || true
-    sed -i "s|TOOLS_DIR =.*|TOOLS_DIR = os.path.join(BASE_DIR, 'tools')|" ~/.hacklab/hl 2>/dev/null || true
+# Проверяем установку
+echo "🔍 Проверяем установку..."
+if [ -f ~/.local/bin/hl ]; then
+    echo ""
+    echo "✅ HackLab Manager v2.3 успешно установлен!"
+    echo ""
+    echo "📚 КОМАНДЫ:"
+    echo "   hl learn          - Интерактивное обучение методологии"
+    echo "   hl lab start 1    - Lab 1: Web Pentest (testfire.net)"
+    echo "   hl lab start 2    - Lab 2: Network+Web Pentest (scanme.nmap.org) - НОВОЕ!"
+    echo "   hl scan [цель]    - Сканирование цели"
+    echo "   hl analyze        - Анализ твоего подхода с улучшенной логикой"
+    echo "   hl lab list       - Список лабораторий"
+    echo ""
+    echo "🎯 НОВОЕ В v2.3:"
+    echo "   • Полностью переработанный 'hl learn'"
+    echo "   • Новая Lab 2: Network + Web Pentest методика"
+    echo "   • Улучшенный анализатор с оценкой времени и эффективности"
+    echo "   • Фокус на мышлении пентестера, а не на инструментах"
+    echo ""
+    echo "💡 Начни с: hl learn"
 else
-    echo -e "${YELLOW}⚠️  Файл hl не найден${NC}"
+    echo "❌ Ошибка установки"
+    exit 1
 fi
-
-# Создаем симлинк
-echo -e "${BLUE}🔗 Создание ссылки...${NC}"
-ln -sf ~/.hacklab/hl ~/.local/bin/hl 2>/dev/null || true
-
-# Создаем конфигурацию
-echo -e "${BLUE}⚙️  Создание конфигурации...${NC}"
-cat > ~/.hacklab/config.json << 'CONFIG'
-{
-  "mode": "beginner",
-  "level": 1,
-  "xp": 0,
-  "unlocked_tools": ["network_info", "port_check"],
-  "first_run": false,
-  "created": "$(date -Iseconds)"
-}
-CONFIG
-
-# Создаем базу данных
-echo -e "${BLUE}🗄️  Инициализация базы данных...${NC}"
-if [ -f "db/init.py" ]; then
-    cp db/init.py ~/.hacklab/db/
-    cd ~/.hacklab
-    python3 db/init.py 2>/dev/null || true
-    cd - > /dev/null
-elif [ -f "~/.hacklab/db/init.py" ]; then
-    cd ~/.hacklab
-    python3 db/init.py 2>/dev/null || true
-    cd - > /dev/null
-fi
-
-echo -e "\n${GREEN}🎉 УСТАНОВКА ЗАВЕРШЕНА!${NC}"
-echo ""
-echo -e "${BLUE}📋 КОМАНДЫ:${NC}"
-echo -e "  ${YELLOW}hl${NC}                    - Главное меню"
-echo -e "  ${YELLOW}hl scan <цель>${NC}       - Сканирование"
-echo -e "  ${YELLOW}hl analyze${NC}           - Анализ твоего подхода"
-echo -e "  ${YELLOW}hl lab list${NC}          - Лаборатории"
-echo -e "  ${YELLOW}hl report lab 1${NC}      - PDF отчет"
-echo -e "  ${YELLOW}hl tools${NC}             - Все инструменты"
-echo ""
-echo -e "${YELLOW}💡 Перезапустите терминал или выполните:${NC}"
-echo -e "  source ~/.bashrc  # или source ~/.zshrc"
-echo ""
-echo -e "${GREEN}🚀 Начните с: hl lab start 1${NC}"

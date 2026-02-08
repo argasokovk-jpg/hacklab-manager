@@ -222,7 +222,7 @@ def load_tool_module(tool_name):
         # Выполняем модуль
         spec.loader.exec_module(module)
         
-        func_names = ['run', 'scan', f'{tool_name}', f'scan_{tool_name}', 
+        func_names = ['run', 'scan', f'scan_{tool_name}', 
               'get_network_info', 'scan_ports', 'check_ssl', 'whois_lookup',
               'scan_website', 'scan_directories', 'find_subdomains',
               'test_sql_injection', 'scan_xss', 'fuzz_api']
@@ -244,6 +244,13 @@ def load_tool_module(tool_name):
         return None
 
 def cmd_scan(target, tool_name=None):
+    
+    try:
+        from core.action_logger import logger
+        has_logger = True
+    except:
+        has_logger = False
+
     config = load_config()
     mode = config.get("mode", "beginner")
     level = config.get("level", 1)
@@ -289,6 +296,20 @@ def cmd_scan(target, tool_name=None):
         if tool:
             try:
                 result = tool(target)
+                
+                if has_logger:
+                    try:
+                        logger.log_action(
+                            user_id=1,
+                            lab_id=config.get("current_lab", 1),
+                            action_type=tool_name + "_scan",
+                            tool_used=tool_name,
+                            target=target,
+                            result=str(result)[:100]  # первые 100 символов
+                        )
+                        print(f"{Colors.GREEN}📝 Действие записано в журнал{Colors.END}")
+                    except Exception as log_e:
+                        print(f"{Colors.YELLOW}⚠️  Не удалось записать лог: {log_e}{Colors.END}")
                 
                 # Добавляем XP
                 if mode == "beginner":
@@ -503,14 +524,17 @@ def cmd_learn():
 def cmd_analyze():
     """Анализ действий пользователя"""
     print(f"{Colors.BLUE}🧠 Анализирую твой подход...{Colors.END}")
-    print(f"DEBUG: BASE_DIR = {BASE_DIR}")  # Добавить эту строку
-    print(f"DEBUG: analyzer.py exists = {os.path.exists(os.path.join(BASE_DIR, 'core', 'analyzer.py'))}")  # И эту
-    # Просто запускаем анализатор напрямую
+    
     import sys
     sys.path.insert(0, BASE_DIR)
-    from core.analyzer import ThinkingAnalyzer
-    analyzer = ThinkingAnalyzer()
-    analyzer.print_report()
+    
+    try:
+        from core.analyzer import ThinkingAnalyzer, print_analysis
+        analyzer = ThinkingAnalyzer()
+        result = analyzer.analyze()  # <--- ЗДЕСЬ ИЗМЕНИЛ
+        print_analysis(result)       # <--- ЗДЕСЬ ДОБАВИЛ
+    except Exception as e:
+        print(f"{Colors.RED}❌ Ошибка: {e}{Colors.END}")
 
 def cmd_lab():
     """Управление лабораториями"""
@@ -562,11 +586,30 @@ def cmd_lab():
             if os.path.exists(desc_path):
                 with open(desc_path, 'r') as f:
                     print(f.read())
+                    
+        elif lab_id == "2":  # <--- ДОБАВЬ ЭТУ СТРОКУ
+            print(f"\n{Colors.GREEN}🚀 НАЧИНАЕМ LAB 2: Network + Web Pentest{Colors.END}")
+            print("="*50)
+            
+            # Показываем описание
+            desc_path = os.path.join(BASE_DIR, "labs", "lab2_network", "description.md")
+            if os.path.exists(desc_path):
+                with open(desc_path, 'r') as f:
+                    print(f.read())
+            else:
+                print(f"{Colors.YELLOW}Lab 2: Network + Web Pentest{Colors.END}")
+                print(f"Цель: scanme.nmap.org")
+                print(f"Фокус: Связь сетевого и веб-тестирования")
+            
+            print(f"\n{Colors.YELLOW}💡 Ключевые вопросы для мышления:{Colors.END}")
+            print(f"  1. Почему начать с network_info правильно?")
+            print(f"  2. Когда dir_buster лишний на этом этапе?")
+            print(f"  3. Как связать порты с уязвимостями?")
             
             print(f"\n{Colors.YELLOW}💡 Для начала используй:{Colors.END}")
-            print(f"  hl tool whois_checker testfire.net")
+            print(f"  hl tool network_info scanme.nmap.org")
             print(f"  или")
-            print(f"  python3 tools/whois_checker.py testfire.net")
+            print(f"  python3 tools/network_info.py scanme.nmap.org")
             
             # Устанавливаем lab_id для логгера
             try:
@@ -679,7 +722,6 @@ def cmd_premium():
 
 def main():
     # ОТЛАДКА: покажем что пришло
-    print(f"DEBUG: sys.argv = {sys.argv}")
     
     # Проверяем первый запуск
     if not os.path.exists(CONFIG_FILE):
