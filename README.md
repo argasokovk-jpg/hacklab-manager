@@ -1,105 +1,161 @@
-# HackLab Manager 🧠⚔️
+# 🧠 HackLab Manager
 
-HackLab Manager is a **Cognitive Pentest Analyzer** — a framework that analyzes **how a pentester thinks**, not just whether an exploit worked.
+**HackLab Manager** — это CLI-платформа для обучения пентесту, которая анализируетдля обучения пенте а🧠 HackLab Manager
 
-Unlike classic platforms (TryHackMe, HTB), HackLab Manager focuses on:
-- methodology
-- decision-making
-- sequence of actions
-- efficiency and noise
-- professional pentest thinking
+**Hac
 
-## 🔑 Key Feature: Cognitive Pentest Analyzer
+Вместо проверки “взломал или нет”, система оценивает:
 
-HackLab Manager evaluates:
-- Recon → Scan → Analysis → Exploit order
-- Time between actions
-- Redundant / noisy behavior
-- Tool selection efficiency
-- Overall pentest strategy
+- 🧭 последовательность действий
+- ⚡ эффективность подхода
+- 🧠 методологию pentest
+- 📊 качество принятия решений
 
-It generates:
-- score (0–100)
-- skill level (Junior / Middle / Senior)
-- actionable recommendations
-- professional PDF reports
+Главная фича —истема оценивает:
 
-## 🚀 Features
+- 🧭 последов
 
-- 🧠 Cognitive analysis of pentest methodology
-- 🛠️ 12 integrated pentesting tools
-- 🧪 Interactive Labs (Web, Network)
-- 📊 Automatic action logging (SQLite)
-- 📄 Professional PDF reports
-- 📚 Interactive learning mode (`hl learn`)
-- ⚙️ Fully CLI-based (Linux)
+## ⚡ Try in 30 seconds
 
-## 🧪 Labs
+```bash
+git clone https://github.com/argasokovk-jpg/hacklab-manager
+cd hacklab-manager
+bash install.sh
 
-- **Lab 1:** Web Pentest (SQLi, XSS, Dir Busting)
-- **Lab 2:** Network + Web Pentest (scanme.nmap.org)
+hl learn
 
-Start a lab:
-=======
-HackLab Manager — это CLI-фреймворк для обучения пентесту, который фокусируется не на флагах и чеклистах, а на мышлении пентестера.
+После запуска ты сразу увидишь, как система анализирует твой подход к пентесту.
 
-Проект анализирует:
- порядок действий,
- выбор инструментов,
- методологию,
-а не просто результат «нашёл / не нашёл».
+🎯 Основная идея
 
-Если коротко — HackLab Manager учит думать как пентестер.
+Большинство платформ учат:
 
-"Зачем этот проект?"
+Найди уязвимость → получи флаг
 
-Большинство платформ по пентесту:
- проверяют только результат,
- не объясняют, почему ты ошибся,
- не оценивают ход мыслей.
+HackLab Manager учит:
 
-HackLab Manager решает другую задачу:
+Как думает профессиональный пентестер
 
-показать, как ты думаешь, и помочь улучшить подход.
+Система анализирует:
 
-Ключевые возможности
- Thinking Analysis Engine
-Анализирует последовательность действий и методологию пентеста.
- Learning Mode (hl learn)
-Объясняет базовый подход к пентесту и правильный порядок шагов.
- Практические лаборатории
-Задания с идеальной последовательностью и анализом ошибок.
- Профессиональные PDF-отчёты
-Итоговый отчёт с оценкой уровня и рекомендациями.
- CLI-first
-Минимум лишнего — всё работает из терминала.
+Recon → Scan → Analysis → Exploitation → Reporting
 
-Быстрый старт
+и даёт рекомендации по улучшению стратегии.
 
-curl -fsSL https://raw.githubusercontent.com/argasokovk-jpg/hacklab-manager/main/install.sh | bash
+🧠 Cognitive Pentest Analyzer
+
+Analyzer оценивает:
+ • правильность последовательности действий
+ • лишние шаги (noise detection)
+ • скорость принятия решений
+ • эффективность инструментов
+ • уровень навыка (Junior → Professional)
+
+Пример:
+
+Score: 79/100
+Level: Middle
+Recommendation:
+- Start with reconnaissance before scanning
+- Reduce repeated actions
+- Add directory discovery earlier
+
+🧪 Labs
+
+Встроенные лаборатории:
+
+Lab 1 — Web Pentest
+ • SQL Injection
+ • XSS
+ • Directory discovery
+
+Lab 2 — Network + Web
+ • target: scanme.nmap.org (legal training target)
+ • reconnaissance methodology
+ • service analysis
+
+Запуск:
+
+hl lab list
+hl lab start 1
+
+📚 Learning Mode
+
+Интерактивное обучение:
+
+hl learn
+
+Включает:
+ • методологию пентеста
+ • практические сценарии
+ • подготовку к лабораториям
+ • мини-тесты
+
+📊 PDF Reports
+
+Генерация профессиональных отчетов:
+
+hl analyze
+hl report lab 1
+
+Отчет включает:
+ • итоговую оценку
+ • использованные инструменты
+ • рекомендации
+ • хронологию действий
+
+Подходит для портфолио.
+
+🛠 Tools Included
+ • network_info
+ • port_check
+ • web_scanner
+ • dir_buster
+ • sql_tester
+ • xss_scanner
+ • ssl_checker
+ • whois_checker
+ • subdomain_scanner
+ • api_fuzzer
+ • hash_cracker
+ • cve_lookup
+
+Все действия автоматически логируются для анализа.
+
+⸻
+
+🚀 Installation
+
+git clone https://github.com/argasokovk-jpg/hacklab-manager
+cd hacklab-manager
+bash install.sh
+
+
+🧭 Example Workflow
+
 hl learn
 hl lab start 1
+
+hl scan testfire.net --tool network_info
+hl scan testfire.net --tool port_check
+
 hl analyze
+hl report lab 1
 
-Как это работает
- 1. Пользователь выполняет действия (сканирование, разведка, тестирование)
- 2. Все шаги автоматически логируются
- 3. Анализатор оценивает:
- 4. порядок действий
- 5. логику выбора инструментов
- 6. наличие лишних шагов
- 7. Пользователь получает:
- 8. уровень (Junior / Middle / Senior)
- 9. рекомендации
- 10. PDF-отчёт
 
-Для кого этот проект
-  начинающие пентестеры
-  студенты ИБ
-  junior-специалисты
-  все, кто хочет улучшить подход, а не просто «решать задания»
+🌐 Website
 
-Статус проекта
+http://hacklabtools.ru
 
-Проект активно развивается.
-Это не коммерческий продукт и не finished-solution, а инженерный инструмент, который растёт вместе с пользователями.
+
+🤝 Contributing
+
+Feedback and ideas are welcome!
+
+Open:
+ • Discussions for questions
+ • Issues for improvements
+
+⭐ Support the project
+
+If HackLab Manager helps your learning journey, consider starring the repository ⭐
