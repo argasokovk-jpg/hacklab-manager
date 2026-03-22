@@ -1,5 +1,4 @@
 #!/bin/bash
-<<<<<<< HEAD
 
 set -e
 
@@ -15,8 +14,7 @@ fi
 # Создаем директории
 echo "📁 Создаем структуру каталогов..."
 mkdir -p ~/.hacklab
-mkdir -p ~/.local/bin
-
+mkdir -p ~/.local/b
 # Копируем файлы
 echo "📦 Копируем файлы..."
 
@@ -77,7 +75,6 @@ else
     echo "❌ Ошибка установки"
     exit 1
 fi
-=======
 echo "========================================="
 echo "🚀 HackLab Manager v2.2 - INSTALLER"
 echo "========================================="
@@ -135,4 +132,3 @@ echo "  hl mode professional"
 echo ""
 echo "💡 Первый запуск: hl"
 echo "========================================="
->>>>>>> 7db36dd95f4d3771a5c526cbd017dde45cc8e0c7
