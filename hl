@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys
+import os
 import json
 import subprocess
 import importlib.util
@@ -14,7 +17,7 @@ BASE_DIR = os.path.dirname(real_path)
 
 # Если мы в .local/bin, используем правильный путь к проекту
 if BASE_DIR.endswith('.local/bin'):
-    BASE_DIR = os.path.expanduser('~/hacklab_v2')
+    BASE_DIR = os.path.expanduser('~/hacklab-manager')
 
 TOOLS_DIR = os.path.join(BASE_DIR, "tools")
 
@@ -165,7 +168,7 @@ def show_welcome():
     xp = config.get("xp", 0)
     
     print("="*60)
-    print(f"{Colors.BOLD}🚀 HACKLAB MANAGER v2.2{Colors.END}")
+    print(f"{Colors.BOLD}🚀 HACKLAB MANAGER v2.3{Colors.END}")
     print("="*60)
     
     mode_display = f"{Colors.GREEN}НОВИЧОК{Colors.END}" if mode == "beginner" else f"{Colors.RED}ПРОФЕССИОНАЛ{Colors.END}"
@@ -519,7 +522,7 @@ def cmd_learn():
         subprocess.run(["python3", learn_script])
     else:
         print(f"{Colors.RED}❌ Файл обучения не найден{Colors.END}")
-        print(f"{Colors.YELLOW}Создайте learn.py в папке hacklab_v2{Colors.END}")
+        print(f"{Colors.YELLOW}Создайте learn.py в папке hacklab-manager{Colors.END}")
 
 def cmd_analyze():
     """Анализ действий пользователя"""
@@ -655,9 +658,17 @@ def cmd_report():
             sys.path.insert(0, BASE_DIR)
             from core.analyzer import ThinkingAnalyzer
             from reports.generator import PDFGenerator            
+            
+            print(f"{Colors.YELLOW}DEBUG: Создаю анализатор...{Colors.END}")
             analyzer = ThinkingAnalyzer()
-            analysis = analyzer.analyze_sequence(lab_id=int(lab_id))
+            
+            print(f"{Colors.YELLOW}DEBUG: Вызываю analyze с lab_id={lab_id}{Colors.END}")
+            analysis = analyzer.analyze(lab_id=int(lab_id))
+            print(f"{Colors.YELLOW}DEBUG: analysis = {analysis}{Colors.END}")
+            
+            print(f"{Colors.YELLOW}DEBUG: Получаю действия...{Colors.END}")
             sequence = analyzer.get_actions(lab_id=int(lab_id))
+            print(f"{Colors.YELLOW}DEBUG: sequence = {sequence}{Colors.END}")
 
             config = load_config()
             username = config.get('username', 'hacker')
@@ -678,6 +689,8 @@ def cmd_report():
             
         except Exception as e:
             print(f"{Colors.RED}❌ Ошибка: {e}{Colors.END}")
+            import traceback
+            traceback.print_exc()
     
     elif subcommand == "list":
         reports_dir = os.path.expanduser("~/.hacklab/reports")
