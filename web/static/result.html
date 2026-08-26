@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Результат — HackLab Manager</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e14;
+            color: #c8d6e5;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: #111820;
+            border: 1px solid #1a2a3a;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 0 40px rgba(0, 200, 200, 0.05);
+        }
+        h1 { color: #00e5ff; font-size: 28px; margin-bottom: 20px; }
+        .score {
+            font-size: 60px;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            color: #00e5ff;
+        }
+        .level {
+            text-align: center;
+            font-size: 24px;
+            color: #8899aa;
+            margin-bottom: 20px;
+        }
+        .feedback {
+            background: #1a2533;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .feedback li {
+            list-style: none;
+            padding: 6px 0;
+            border-bottom: 1px solid #1a2a3a;
+            font-size: 14px;
+        }
+        .feedback li:last-child { border-bottom: none; }
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 24px;
+            border: 1px solid #00e5ff;
+            border-radius: 8px;
+            color: #00e5ff;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            background: #00e5ff;
+            color: #0a0e14;
+        }
+        .error { color: #ff4444; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container" id="resultContainer">
+        <h1>📊 Результат лаборатории</h1>
+        <div id="content">Загрузка...</div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/static/login.html';
+        }
+
+        // Получаем lab_id из URL
+        const params = new URLSearchParams(window.location.search);
+        const labId = params.get('id') || 1;
+
+        fetch(`/api/analyze/${labId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('content');
+            
+            if (data.error) {
+                container.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="score">${data.score || 0}</div>
+                <div class="level">Уровень: ${data.level || 'Beginner'}</div>
+                <div class="feedback">
+                    <ul>
+                        ${(data.feedback || []).map(f => `<li>${f}</li>`).join('')}
+                    </ul>
+                </div>
+                <a href="/static/dashboard.html" class="btn">← На дашборд</a>
+            `;
+        })
+        .catch(err => {
+            document.getElementById('content').innerHTML = 
+                `<div class="error">❌ Ошибка загрузки: ${err.message}</div>`;
+        });
+    </script>
+</body>
+</html>

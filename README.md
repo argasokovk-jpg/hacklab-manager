@@ -159,3 +159,14 @@ Open:
 ⭐ Support the project
 
 If HackLab Manager helps your learning journey, consider starring the repository ⭐
+
+## 🌐 Веб-интерфейс
+
+HackLab Manager теперь доступен в браузере!
+
+### Запуск веб-сервера
+
+```bash
+cd hacklab-manager
+source venv/bin/activate
+uvicorn web.main:app --reload --host 0.0.0.0 --port 8000

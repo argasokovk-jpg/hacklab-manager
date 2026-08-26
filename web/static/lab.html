@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лаборатория — HackLab Manager</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/js/xterm.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0e14;
+            color: #c8d6e5;
+            font-family: 'Courier New', monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #111820;
+            padding: 16px 24px;
+            border-bottom: 1px solid #1a2a3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            color: #00e5ff;
+            font-size: 20px;
+        }
+        .header .status {
+            font-size: 14px;
+            color: #8899aa;
+        }
+        .header .status .online {
+            color: #00e5ff;
+        }
+        .terminal-wrapper {
+            flex: 1;
+            padding: 16px;
+            background: #0a0e14;
+        }
+        .terminal-wrapper #terminal {
+            height: 100%;
+            background: #0a0e14;
+        }
+        .footer {
+            background: #111820;
+            padding: 10px 24px;
+            border-top: 1px solid #1a2a3a;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #445566;
+        }
+        .btn {
+            padding: 6px 16px;
+            border: 1px solid #00e5ff;
+            border-radius: 4px;
+            background: transparent;
+            color: #00e5ff;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            background: #00e5ff;
+            color: #0a0e14;
+        }
+        .btn-danger {
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+        .btn-danger:hover {
+            background: #ff4444;
+            color: #0a0e14;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 Lab 1: Linux Fundamentals</h1>
+        <div>
+            <span class="status" id="connectionStatus">● <span class="online">Подключено</span></span>
+            <button class="btn btn-danger" onclick="finishLab()" style="margin-left: 16px;">Завершить</button>
+        </div>
+    </div>
+
+    <div class="terminal-wrapper">
+        <div id="terminal"></div>
+    </div>
+
+    <div class="footer">
+        <span>Время: <span id="timer">00:00</span></span>
+        <span>Команды: <span id="cmdCount">0</span></span>
+    </div>
+
+    <script src="/static/js/xterm.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/static/login.html';
+        }
+
+        // Создаём терминал
+        const term = new Terminal({
+            cursorBlink: true,
+            theme: {
+                background: '#0a0e14',
+                foreground: '#c8d6e5',
+                cursor: '#00e5ff'
+            }
+        });
+
+        term.open(document.getElementById('terminal'));
+        term.focus();
+
+        // Подключаем WebSocket
+        const ws = new WebSocket(`ws://${window.location.host}/ws/lab?token=${token}`);
+
+        ws.onopen = () => {
+            term.write('\x1b[32m→ Подключено к лаборатории\x1b[0m\r\n');
+            term.write('\x1b[36mstudent@lab:~$\x1b[0m ');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'output') {
+                term.write(data.data);
+                term.write('\r\n\x1b[36mstudent@lab:~$\x1b[0m ');
+            } else if (data.type === 'error') {
+                term.write('\x1b[31m' + data.data + '\x1b[0m\r\n');
+                term.write('\x1b[36mstudent@lab:~$\x1b[0m ');
+            }
+        };
+
+        ws.onclose = () => {
+            term.write('\r\n\x1b[31m→ Соединение потеряно\x1b[0m\r\n');
+            document.getElementById('connectionStatus').innerHTML = '● <span style="color:#ff4444;">Отключено</span>';
+        };
+
+        // Обработка ввода
+        let input = '';
+        term.onData((data) => {
+            if (data === '\r') { // Enter
+                ws.send(JSON.stringify({ command: input }));
+                input = '';
+            } else if (data === '\x7f') { // Backspace
+                if (input.length > 0) {
+                    input = input.slice(0, -1);
+                    term.write('\b \b');
+                }
+            } else {
+                input += data;
+                term.write(data);
+            }
+        });
+
+        // Таймер
+        let seconds = 0;
+        setInterval(() => {
+            seconds++;
+            const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const secs = String(seconds % 60).padStart(2, '0');
+            document.getElementById('timer').textContent = `${mins}:${secs}`;
+        }, 1000);
+
+        // Счётчик команд
+        let cmdCount = 0;
+        document.getElementById('cmdCount').textContent = '0';
+
+        function finishLab() {
+            if (confirm('Завершить лабораторию?')) {
+                ws.send(JSON.stringify({ command: '__finish__' }));
+                setTimeout(() => {
+                    window.location.href = '/static/result.html?id=1';
+                }, 500);
+            }
+        }
+    </script>
+</body>
+</html>

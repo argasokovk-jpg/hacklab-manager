@@ -1,0 +1,15 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    nmap \
+    curl \
+    wget \
+    python3 \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -s /bin/bash student && \
+    echo "student ALL=(ALL) NOPASSWD: /usr/bin/nmap" >> /etc/sudoers
+
+USER student
+WORKDIR /home/student

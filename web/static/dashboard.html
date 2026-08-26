@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд — HackLab Manager</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e14;
+            color: #c8d6e5;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 30px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #1a2a3a;
+            margin-bottom: 30px;
+        }
+        .logo { font-size: 24px; font-weight: 800; color: #00e5ff; }
+        .nav a {
+            color: #8899aa;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+        .nav a:hover { color: #00e5ff; }
+        .nav .active { color: #00e5ff; }
+        .logout-btn {
+            background: transparent;
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-family: inherit;
+            font-size: 14px;
+            margin-left: 20px;
+        }
+        .logout-btn:hover { background: #ff4444; color: #0a0e14; }
+
+        .welcome {
+            margin-bottom: 30px;
+            background: #111820;
+            border: 1px solid #1a2a3a;
+            border-radius: 12px;
+            padding: 24px;
+        }
+        .welcome h1 { font-size: 28px; font-weight: 700; }
+        .welcome h1 span { color: #00e5ff; }
+        .welcome .terminal-line {
+            margin-top: 8px;
+            color: #65e6a3;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .welcome .terminal-line .prompt { color: #00e5ff; }
+        .welcome .terminal-line .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: #00e5ff;
+            vertical-align: middle;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #111820;
+            border: 1px solid #1a2a3a;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card .number { font-size: 36px; font-weight: 700; color: #00e5ff; }
+        .stat-card .label { color: #8899aa; font-size: 13px; margin-top: 4px; }
+
+        .progress-section {
+            background: #111820;
+            border: 1px solid #1a2a3a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .progress-section .label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #8899aa;
+            margin-bottom: 6px;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #1a2a3a;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #5b8cff, #8b5cf6);
+            border-radius: 10px;
+            transition: width 0.5s;
+        }
+
+        .labs-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #f4f7ff;
+        }
+        .lab-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #111820;
+            border: 1px solid #1a2a3a;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            transition: 0.3s;
+        }
+        .lab-item:hover { border-color: #2a3a4a; }
+        .lab-info .name { font-weight: 600; font-size: 16px; }
+        .lab-info .status {
+            font-size: 12px;
+            color: #8899aa;
+            margin-top: 2px;
+        }
+        .lab-info .status .done { color: #65e6a3; }
+        .lab-info .status .locked { color: #ff4444; }
+        .lab-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .lab-score {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00e5ff;
+            min-width: 50px;
+            text-align: right;
+        }
+        .lab-score .empty { color: #445566; font-size: 14px; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        .btn-start {
+            background: #00e5ff;
+            color: #0a0e14;
+        }
+        .btn-start:hover { background: #00c8e0; }
+        .btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-result {
+            background: transparent;
+            border: 1px solid #00e5ff;
+            color: #00e5ff;
+        }
+        .btn-result:hover { background: #00e5ff; color: #0a0e14; }
+        .btn-premium {
+            background: transparent;
+            border: 1px solid #8b5cf6;
+            color: #8b5cf6;
+            cursor: not-allowed;
+        }
+
+        .recent {
+            margin-top: 30px;
+            background: #111820;
+            border: 1px solid #1a2a3a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .recent h3 { font-size: 16px; margin-bottom: 12px; color: #f4f7ff; }
+        .recent-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #1a2a3a;
+            font-size: 14px;
+        }
+        .recent-item:last-child { border-bottom: none; }
+        .recent-item .time { color: #8899aa; font-size: 12px; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #8899aa;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+        @media (max-width: 700px) {
+            .stats { grid-template-columns: 1fr; }
+            .lab-item { flex-direction: column; align-items: stretch; gap: 12px; }
+            .lab-right { justify-content: space-between; }
+            .nav a { margin-left: 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🧠 HackLab</div>
+            <div class="nav">
+                <a href="#" class="active">Дашборд</a>
+                <a href="/static/lab.html?id=1">Lab 1</a>
+                <button class="logout-btn" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+
+        <div class="welcome" id="welcome">
+            <h1>Добро пожаловать, <span id="username">Студент</span> 👋</h1>
+            <div class="terminal-line">
+                <span class="prompt">$</span> whoami
+                <span id="whoami" style="color:#c8d6e5;margin-left:12px;">student@hacklab:~$</span>
+                <span class="cursor"></span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number" id="overallScore">0%</div>
+                <div class="label">Общий прогресс</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="labsCompleted">0/0</div>
+                <div class="label">Пройдено лабораторий</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="avgScore">0</div>
+                <div class="label">Средний балл</div>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div class="label">
+                <span>Ваш прогресс</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="fill" id="progressFill" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <div class="labs-title">📚 Доступные лаборатории</div>
+        <div id="labsList"></div>
+
+        <div class="recent">
+            <h3>📋 Последняя активность</h3>
+            <div id="recentActivity"></div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/static/login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/static/login.html';
+        }
+
+        function startLab(id) {
+            window.location.href = `/static/lab.html?id=${id}`;
+        }
+
+        function viewResult(id) {
+            window.location.href = `/static/result.html?id=${id}`;
+        }
+
+        // Загружаем данные
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/dashboard', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                renderDashboard(data);
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+
+        function renderDashboard(data) {
+            const { labs, stats, recent } = data;
+
+            // Статистика
+            document.getElementById('overallScore').textContent = stats.overall + '%';
+            document.getElementById('labsCompleted').textContent = `${stats.completed}/${stats.total}`;
+            document.getElementById('avgScore').textContent = stats.avg_score;
+
+            // Прогресс
+            document.getElementById('progressPercent').textContent = stats.overall + '%';
+            document.getElementById('progressFill').style.width = stats.overall + '%';
+
+            // Имя пользователя
+            fetch('/api/me', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(r => r.json())
+            .then(user => {
+                document.getElementById('username').textContent = user.username || 'Студент';
+                document.getElementById('whoami').textContent = user.username + '@hacklab:~$';
+            })
+            .catch(() => {});
+
+            // Лаборатории
+            const labsList = document.getElementById('labsList');
+            labsList.innerHTML = '';
+
+            labs.forEach(lab => {
+                const isCompleted = lab.completed;
+                const isPremium = lab.status === 'premium';
+                const score = lab.score;
+
+                let statusHtml = '';
+                let rightHtml = '';
+
+                if (isPremium) {
+                    statusHtml = '<span class="locked">🔒 Premium</span>';
+                    rightHtml = `
+                        <div class="lab-score"><span class="empty">—</span></div>
+                        <button class="btn btn-premium" disabled>🔒</button>
+                    `;
+                } else if (isCompleted) {
+                    statusHtml = '<span class="done">✅ Пройдена</span>';
+                    rightHtml = `
+                        <div class="lab-score">${score}/100</div>
+                        <button class="btn btn-result" onclick="viewResult(${lab.id})">Результат</button>
+                        <button class="btn btn-start" onclick="startLab(${lab.id})">Повторить</button>
+                    `;
+                } else {
+                    statusHtml = '● Доступна';
+                    rightHtml = `
+                        <div class="lab-score"><span class="empty">—</span></div>
+                        <button class="btn btn-start" onclick="startLab(${lab.id})">Старт</button>
+                    `;
+                }
+
+                const div = document.createElement('div');
+                div.className = 'lab-item';
+                div.innerHTML = `
+                    <div class="lab-info">
+                        <div class="name">Lab ${lab.id}: ${lab.name}</div>
+                        <div class="status">${statusHtml}</div>
+                    </div>
+                    <div class="lab-right">${rightHtml}</div>
+                `;
+                labsList.appendChild(div);
+            });
+
+            // Последняя активность
+            const recentDiv = document.getElementById('recentActivity');
+            if (recent.length === 0) {
+                recentDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🚀</div>
+                        <p>Пройди первую лабораторию, чтобы увидеть активность</p>
+                    </div>
+                `;
+            } else {
+                recentDiv.innerHTML = recent.map(r => `
+                    <div class="recent-item">
+                        <span>Lab ${r.lab_id} — ${r.score}/100</span>
+                        <span class="time">${new Date(r.created_at).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

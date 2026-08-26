@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta n<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackLab Manager</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="background-grid"></div>
+
+    <div class="navbar">
+        <div class="logo">
+            <div class="logo-icon">🧠</div>
+            HackLab
+        </div>
+        <nav>
+            <a href="#">Главная</a>
+            <a href="#">Лаборатории</a>
+            <a href="#">Прогресс</a>
+        </nav>
+        <div class="nav-actions">
+            <a href="/static/login.html" class="login-btn">Вход</a>
+            <a href="/static/register.html" class="register-btn">Регистрация</a>
+        </div>
+    </div>
+
+    <section class="hero">
+        <div>
+            <div class="status">
+                <span class="status-dot"></span>
+                Система активна
+            </div>
+            <h1>
+                Обучайся пентесту
+                <span>с анализом мышления</span>
+            </h1>
+            <p>
+                HackLab Manager — платформа, которая анализирует твой подход,
+                оценивает методологию и помогает расти от новичка до профессионала.
+            </p>
+            <div class="hero-buttons">
+                <a href="/static/register.html" class="primary-button">
+                    Начать обучение →
+                </a>
+                <a href="#" class="secondary-button">Как это работает</a>
+            </div>
+            <div class="hero-stats">
+                <div><strong>3</strong><span>лаборатории</span></div>
+                <div><strong>12</strong><span>инструментов</span></div>
+                <div><strong>100%</strong><span>анализ действий</span></div>
+            </div>
+        </div>
+
+        <div class="terminal-preview">
+            <div class="terminal-header">
+                <div class="terminal-dots"><i></i><i></i><i></i></div>
+                <span>student@lab:~</span>
+                <span class="terminal-status">● активна</span>
+            </div>
+            <div class="terminal-body">
+                <div><span class="terminal-user">student@lab</span>:<span class="terminal-path">~</span>$ <span class="command">ls</span></div>
+                <div class="terminal-output">documents  labs  notes</div>
+                <div><span class="terminal-user">student@lab</span>:<span class="terminal-path">~</span>$ <span class="command">cat flag.txt</span></div>
+                <div class="terminal-output">HACKLAB{learn_practice_analyze}</div>
+                <div><span class="terminal-user">student@lab</span>:<span class="terminal-path">~</span>$ <span class="cursor"></span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-title">
+            <span>Почему HackLab</span>
+            <h2>Учись <strong>как думать</strong>,<br>а не просто взламывать</h2>
+        </div>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-number">01</div>
+                <div class="feature-icon">🧠</div>
+                <h3>Анализ мышления</h3>
+                <p>Оцениваем последовательность, эффективность и методологию твоих действий.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-number">02</div>
+                <div class="feature-icon">📊</div>
+                <h3>Реальные отчёты</h3>
+                <p>Получай профессиональные PDF-отчёты с рекомендациями по улучшению.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-number">03</div>
+                <div class="feature-icon">🛡️</div>
+                <h3>Безопасная среда</h3>
+                <p>Изолированные лаборатории в Docker — учись без риска для системы.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section labs-section">
+        <div class="section-heading">
+            <div>
+                <span>Лаборатории</span>
+                <h2>Практикуйся <strong>в реальных сценариях</strong></h2>
+            </div>
+            <a href="#">Смотреть все →</a>
+        </div>
+        <div class="labs-grid">
+            <div class="lab-card">
+                <div class="lab-top">
+                    <span class="lab-level easy">● Лёгкая</span>
+                    <span class="lab-number">LAB 01</span>
+                </div>
+                <h3>Linux Fundamentals</h3>
+                <p>Навигация, файлы, процессы — освой базовые команды Linux.</p>
+                <div class="lab-footer">
+                    <span>⏱ 30 мин</span>
+                    <span>📚 7 заданий</span>
+                    <a href="/static/lab.html?id=1"><button>Старт</button></a>
+                </div>
+            </div>
+            <div class="lab-card">
+                <div class="lab-top">
+                    <span class="lab-level medium">● Средняя</span>
+                    <span class="lab-number">LAB 02</span>
+                </div>
+                <h3>Network Reconnaissance</h3>
+                <p>Сканирование портов, разведка, анализ сетевых служб.</p>
+                <div class="lab-footer">
+                    <span>⏱ 45 мин</span>
+                    <span>📚 8 заданий</span>
+                    <a href="#"><button>Скоро</button></a>
+                </div>
+            </div>
+            <div class="lab-card">
+                <div class="lab-top">
+                    <span class="lab-level hard">● Сложная</span>
+                    <span class="premium-tag">PREMIUM</span>
+                </div>
+                <h3>Web Pentest</h3>
+                <p>SQL-инъекции, XSS, поиск уязвимостей в веб-приложениях.</p>
+                <div class="lab-footer">
+                    <span>⏱ 60 мин</span>
+                    <span>📚 10 заданий</span>
+                    <a href="#"><button>Доступно в Pro</button></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <span>© 2026 HackLab Manager</span>
+        <span>Обучайся. Практикуйся. Становись хакером.</span>
+    </footer>
+</body>
+</html>
