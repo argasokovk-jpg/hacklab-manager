@@ -3,6 +3,8 @@ import os
 from datetime import datetime
 from collections import defaultdict
 
+from core.analyzer_v2 import ActionClassifier, MethodologyAnalyzer, EfficiencyAnalyzer, ScoringEngine, FeedbackGenerator
+
 class ThinkingAnalyzer:
     def __init__(self, db_path=None):
         self.db_path = db_path or os.path.expanduser('~/.hacklab/data.db')
@@ -198,10 +200,14 @@ class ThinkingAnalyzer:
                 feedback.append("📉 Низкая эффективность. Много повторных действий.")
         
         return score, feedback
-    
-    def analyze(self, user_id=1, lab_id=None, target_filter=None):
+
+    def analyze_v2(self, user_id=1, lab_id=None, target_filter=None):
+        """
+        Новая версия анализатора — использует компоненты analyzer_v2
+        """
         print("🧠 Анализирую твой подход с улучшенной логикой...")
         
+        # Получаем действия
         actions = self.get_actions(user_id, lab_id)
         
         if not actions:
@@ -227,33 +233,53 @@ class ThinkingAnalyzer:
                 "recommendations": [f"➡️ Начни с hl tool network_info {target_filter}"]
             }
         
-        score = 50
-        all_feedback = []
+        # Конвертируем действия в формат для анализатора
+        formatted_actions = []
+        for a in actions:
+            formatted_actions.append({
+                'command': a.get('type', ''),
+                'tool': a.get('tool', ''),
+                'target': a.get('target', ''),
+                'timestamp': a.get('timestamp', ''),
+                'exit_code': 0  # TODO: получить из БД
+            })
         
+        # Классифицируем действия
+        classified = ActionClassifier.classify_actions(formatted_actions)
+        
+        # Анализируем методологию
+        methodology_score, methodology_feedback = MethodologyAnalyzer.analyze(classified)
+        
+        # Анализируем эффективность
+        efficiency_score, efficiency_feedback, efficiency_stats = EfficiencyAnalyzer.analyze(formatted_actions)
+        
+        # Считаем итоговую оценку
+        scoring_result = ScoringEngine.calculate(methodology_score, efficiency_score)
+        
+        # Генерируем фидбек
+        feedback_result = FeedbackGenerator.generate(
+            methodology_score, methodology_feedback,
+            efficiency_score, efficiency_feedback,
+            efficiency_stats,
+            scoring_result['overall'],
+            scoring_result['level']
+        )
+        
+        # Старые анализы для совместимости
         time_score, time_feedback = self._analyze_timing(actions)
-        score += time_score
-        all_feedback.extend(time_feedback)
-        
         noise_score, noise_feedback = self._analyze_noise(actions)
-        score += noise_score
-        all_feedback.extend(noise_feedback)
-        
         seq_score, seq_feedback = self._analyze_sequence_logic(actions)
-        score += seq_score
+        
+        # Собираем все фидбеки
+        all_feedback = []
+        all_feedback.extend(time_feedback)
+        all_feedback.extend(noise_feedback)
         all_feedback.extend(seq_feedback)
         
-        eff_score, eff_feedback = self._analyze_efficiency(actions)
-        score += eff_score
-        all_feedback.extend(eff_feedback)
-        
-        if len(actions) <= 8 and len(set(a.get('tool', '') for a in actions)) >= 5:
-            score += 15
-            all_feedback.append("🏆 Отличная стратегия! Минимум действий при максимуме результата.")
-        
-        score = max(0, min(100, score))
-        
+        # Уникальные инструменты
         unique_tools = list(set(a.get('tool', '') for a in actions))
         
+        # Таймлайн
         timeline = []
         for i, action in enumerate(actions[-10:], 1):
             ts = action.get('timestamp', '')[:19]
@@ -264,12 +290,39 @@ class ThinkingAnalyzer:
         return {
             "total_actions": len(actions),
             "tools_used": unique_tools,
-            "score": score,
-            "level": self._get_level(score),
+            "score": int(scoring_result['overall']),
+            "level": scoring_result['level'],
             "feedback": all_feedback,
             "timeline": timeline,
-            "targets": list(set(a.get('target', '') for a in actions))
+            "targets": list(set(a.get('target', '') for a in actions)),
+            # Новые данные
+            "analyzer_v2": {
+                "methodology": {
+                    "score": methodology_score,
+                    "feedback": methodology_feedback,
+                    "rating": feedback_result['methodology']['rating']
+                },
+                "efficiency": {
+                    "score": efficiency_score,
+                    "feedback": efficiency_feedback,
+                    "stats": efficiency_stats,
+                    "rating": feedback_result['efficiency']['rating']
+                },
+                "overall": {
+                    "score": scoring_result['overall'],
+                    "level": scoring_result['level']
+                },
+                "summary": feedback_result['summary'],
+                "advice": feedback_result['advice']
+            }
         }
+
+    def analyze(self, user_id=1, lab_id=None, target_filter=None):
+        """
+        Основной метод — использует v2, но сохраняет совместимость
+        """
+        return self.analyze_v2(user_id, lab_id, target_filter)
+
 
 def print_analysis(result):
     print("\n" + "="*50)
@@ -293,18 +346,27 @@ def print_analysis(result):
     print(f"\n🏆 ОЦЕНКА: {result['score']}/100")
     print(f"📈 УРОВЕНЬ: {result['level']}")
     
+    # Новые данные
+    if 'analyzer_v2' in result:
+        v2 = result['analyzer_v2']
+        print("\n📊 ДЕТАЛЬНЫЙ АНАЛИЗ:")
+        print(f"  Методология: {v2['methodology']['score']}%")
+        print(f"  Эффективность: {v2['efficiency']['score']}%")
+        print(f"  Итоговая оценка: {v2['overall']['score']}%")
+        print(f"  Уровень: {v2['overall']['level']}")
+        
+        print("\n💡 РЕЗЮМЕ:")
+        for s in v2['summary']:
+            print(f"  {s}")
+        
+        print("\n🎯 СОВЕТЫ:")
+        for a in v2['advice']:
+            print(f"  {a}")
+    
     if result['feedback']:
         print(f"\n📝 ОБРАТНАЯ СВЯЗЬ:")
         for fb in result['feedback']:
             print(f"  {fb}")
-    
-    print(f"\n💡 РЕКОМЕНДАЦИИ:")
-    if result['score'] >= 80:
-        print("  [+] Продолжай в том же духе! Ты на пути к Senior уровню.")
-    elif result['score'] >= 60:
-        print("  [+] Хороший подход, но есть что улучшить.")
-    else:
-        print("  [+] Сфокусируйся на методологии из 'hl learn'")
     
     print(f"\n🕒 ПОСЛЕДНИЕ ДЕЙСТВИЯ:")
     for i, line in enumerate(result['timeline'], 1):

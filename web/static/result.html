@@ -6,73 +6,111 @@
     <title>Результат — HackLab Manager</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0e14;
-            color: #c8d6e5;
-            font-family: 'Courier New', monospace;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
         .container {
-            background: #111820;
-            border: 1px solid #1a2a3a;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #0c1019;
+            border: 1px solid rgba(255,255,255,0.08);
             border-radius: 16px;
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-            box-shadow: 0 0 40px rgba(0, 200, 200, 0.05);
         }
-        h1 { color: #00e5ff; font-size: 28px; margin-bottom: 20px; }
-        .score {
-            font-size: 60px;
-            font-weight: bold;
+        h1 {
             text-align: center;
-            padding: 20px;
-            color: #00e5ff;
+            font-size: 28px;
+            color: #f4f7ff;
+            margin-bottom: 20px;
+        }
+        .score {
+            text-align: center;
+            font-size: 72px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #5b8cff, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .level {
             text-align: center;
-            font-size: 24px;
-            color: #8899aa;
-            margin-bottom: 20px;
+            font-size: 18px;
+            color: #8790a5;
+            margin: 8px 0 20px;
         }
-        .feedback {
-            background: #1a2533;
-            border-radius: 8px;
+        .block {
+            background: #0a0e14;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
             padding: 16px;
-            margin-top: 16px;
+            margin-bottom: 16px;
         }
-        .feedback li {
+        .block h3 {
+            color: #f4f7ff;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .block ul {
             list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .block ul li {
             padding: 6px 0;
-            border-bottom: 1px solid #1a2a3a;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #c8d6e5;
             font-size: 14px;
         }
-        .feedback li:last-child { border-bottom: none; }
+        .block ul li:last-child {
+            border-bottom: none;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            color: #c8d6e5;
+            font-size: 14px;
+        }
+        .detail-row .label {
+            color: #8790a5;
+        }
         .btn {
             display: inline-block;
-            margin-top: 20px;
+            margin-top: 16px;
             padding: 10px 24px;
-            border: 1px solid #00e5ff;
+            border: 1px solid #5b8cff;
             border-radius: 8px;
-            color: #00e5ff;
+            color: #5b8cff;
             text-decoration: none;
             transition: 0.3s;
+            text-align: center;
         }
         .btn:hover {
-            background: #00e5ff;
+            background: #5b8cff;
             color: #0a0e14;
         }
-        .error { color: #ff4444; text-align: center; }
+        .center {
+            text-align: center;
+        }
+        .good { color: #65e6a3; }
+        .average { color: #e6c765; }
+        .bad { color: #ff7070; }
+        .loading {
+            text-align: center;
+            color: #8790a5;
+            padding: 40px;
+        }
     </style>
 </head>
 <body>
+    <div class="background-grid"></div>
+
+    <div class="navbar">
+        <div class="logo"><div class="logo-icon">🧠</div>HackLab</div>
+        <nav>
+            <a href="/static/dashboard.html">Дашборд</a>
+            <a href="/static/profile.html">Профиль</a>
+        </nav>
+    </div>
+
     <div class="container" id="resultContainer">
-        <h1>📊 Результат лаборатории</h1>
-        <div id="content">Загрузка...</div>
+        <div class="loading">Загрузка...</div>
     </div>
 
     <script>
@@ -81,39 +119,102 @@
             window.location.href = '/static/login.html';
         }
 
-        // Получаем lab_id из URL
         const params = new URLSearchParams(window.location.search);
         const labId = params.get('id') || 1;
 
         fetch(`/api/analyze/${labId}`, {
             method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token
-            }
+            headers: { 'Authorization': 'Bearer ' + token }
         })
         .then(r => r.json())
         .then(data => {
-            const container = document.getElementById('content');
-            
+            const container = document.getElementById('resultContainer');
+
             if (data.error) {
-                container.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+                container.innerHTML = `<div class="center" style="color:#ff7070;">❌ ${data.error}</div>`;
                 return;
             }
 
-            container.innerHTML = `
+            const v2 = data.analyzer_v2 || {};
+            const methodology = v2.methodology || {};
+            const efficiency = v2.efficiency || {};
+            const overall = v2.overall || {};
+            const summary = v2.summary || [];
+            const advice = v2.advice || [];
+            const feedback = data.feedback || [];
+
+            let html = `
+                <h1>📊 Результат</h1>
                 <div class="score">${data.score || 0}</div>
                 <div class="level">Уровень: ${data.level || 'Beginner'}</div>
-                <div class="feedback">
-                    <ul>
-                        ${(data.feedback || []).map(f => `<li>${f}</li>`).join('')}
-                    </ul>
+
+                <div class="block">
+                    <h3>📈 Детали</h3>
+                    <div class="detail-row">
+                        <span class="label">Методология</span>
+                        <span>${methodology.score || 0}%</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Эффективность</span>
+                        <span>${efficiency.score || 0}%</span>
+                    </div>
+                    ${efficiency.stats ? `
+                    <div class="detail-row">
+                        <span class="label">Всего команд</span>
+                        <span>${efficiency.stats.total_commands || 0}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Уникальных команд</span>
+                        <span>${efficiency.stats.unique_commands || 0}</span>
+                    </div>
+                    ` : ''}
                 </div>
-                <a href="/static/dashboard.html" class="btn">← На дашборд</a>
+
+                ${methodology.feedback && methodology.feedback.length ? `
+                <div class="block">
+                    <h3>📝 Методология</h3>
+                    <ul>${methodology.feedback.map(f => `<li>${f}</li>`).join('')}</ul>
+                </div>
+                ` : ''}
+
+                ${efficiency.feedback && efficiency.feedback.length ? `
+                <div class="block">
+                    <h3>⚡ Эффективность</h3>
+                    <ul>${efficiency.feedback.map(f => `<li>${f}</li>`).join('')}</ul>
+                </div>
+                ` : ''}
+
+                ${feedback && feedback.length ? `
+                <div class="block">
+                    <h3>📋 Обратная связь</h3>
+                    <ul>${feedback.map(f => `<li>${f}</li>`).join('')}</ul>
+                </div>
+                ` : ''}
+
+                ${summary && summary.length ? `
+                <div class="block">
+                    <h3>💡 Резюме</h3>
+                    <ul>${summary.map(s => `<li>${s}</li>`).join('')}</ul>
+                </div>
+                ` : ''}
+
+                ${advice && advice.length ? `
+                <div class="block">
+                    <h3>🎯 Советы</h3>
+                    <ul>${advice.map(a => `<li>${a}</li>`).join('')}</ul>
+                </div>
+                ` : ''}
+
+                <div class="center">
+                    <a href="/static/dashboard.html" class="btn">← На дашборд</a>
+                </div>
             `;
+
+            container.innerHTML = html;
         })
         .catch(err => {
-            document.getElementById('content').innerHTML = 
-                `<div class="error">❌ Ошибка загрузки: ${err.message}</div>`;
+            document.getElementById('resultContainer').innerHTML =
+                `<div class="center" style="color:#ff7070;">❌ Ошибка: ${err.message}</div>`;
         });
     </script>
 </body>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль — HackLab Manager</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .profile-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .profile-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .profile-level {
+            color: var(--muted);
+            font-size: 14px;
+        }
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .stat-card {
+            background: #0a0e14;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--blue);
+        }
+        .stat-card .label {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .skills-section {
+            margin: 24px 0;
+        }
+        .skills-section h3 {
+            color: var(--text);
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .skill-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .skill-item .name {
+            width: 120px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+        .skill-item .bar {
+            flex: 1;
+            height: 6px;
+            background: #1a2a3a;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .skill-item .bar .fill {
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, var(--blue), var(--purple));
+        }
+        .skill-item .score {
+            width: 50px;
+            font-size: 14px;
+            color: var(--text);
+            text-align: right;
+        }
+        .achievements-section {
+            margin: 24px 0;
+        }
+        .achievements-section h3 {
+            color: var(--text);
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .achievement-item {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 4px;
+            background: #0a0e14;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text);
+        }
+        .achievement-item.locked {
+            opacity: 0.4;
+        }
+        .achievement-item .icon {
+            font-size: 20px;
+            margin-right: 6px;
+        }
+        .progress-section {
+            margin: 24px 0;
+        }
+        .progress-section h3 {
+            color: var(--text);
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .progress-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .progress-item .lab { color: var(--text); }
+        .progress-item .score { color: var(--blue); font-weight: 600; }
+        .progress-item .date { color: var(--muted); font-size: 12px; }
+        .btn-back {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 10px 24px;
+            border: 1px solid var(--blue);
+            border-radius: 8px;
+            color: var(--blue);
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .btn-back:hover {
+            background: var(--blue);
+            color: #fff;
+        }
+        .loading {
+            text-align: center;
+            color: var(--muted);
+            padding: 40px;
+        }
+        @media (max-width: 700px) {
+            .profile-stats { grid-template-columns: repeat(2, 1fr); }
+            .profile-header { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-grid"></div>
+
+    <div class="navbar">
+        <div class="logo"><div class="logo-icon">🧠</div>HackLab</div>
+        <nav>
+            <a href="/static/dashboard.html">Дашборд</a>
+            <a href="#" class="active">Профиль</a>
+        </nav>
+    </div>
+
+    <div class="profile-container" id="profileContainer">
+        <div class="loading">Загрузка...</div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/static/login.html';
+        }
+
+        fetch('/api/profile', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('profileContainer');
+            
+            if (data.error) {
+                container.innerHTML = `<div style="color:#ff4444;text-align:center;">❌ ${data.error}</div>`;
+                return;
+            }
+
+            const user = data.user || {};
+            const stats = data.stats || {};
+            const skills = data.skills || {};
+            const achievements = data.achievements || [];
+            const progress = data.progress || [];
+
+            let html = `
+                <div class="profile-header">
+                    <div class="avatar">${user.username ? user.username[0].toUpperCase() : 'U'}</div>
+                    <div>
+                        <div class="profile-name">${user.username || 'Пользователь'}</div>
+                        <div class="profile-level">${stats.level || 'Beginner'} • ${stats.total_xp || 0} XP</div>
+                        <div style="color:var(--muted);font-size:12px;">${user.email || ''}</div>
+                        <div style="color:var(--muted);font-size:12px;">С нами с ${user.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : '-'}</div>
+                    </div>
+                </div>
+
+                <div class="profile-stats">
+                    <div class="stat-card">
+                        <div class="number">${stats.total_labs || 0}</div>
+                        <div class="label">Лабораторий</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">${stats.avg_score || 0}%</div>
+                        <div class="label">Средний балл</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">${stats.best_score || 0}%</div>
+                        <div class="label">Лучший результат</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">${stats.total_xp || 0}</div>
+                        <div class="label">XP</div>
+                    </div>
+                </div>
+
+                <div class="skills-section">
+                    <h3>📊 Навыки</h3>
+                    ${Object.entries(skills).map(([name, score]) => `
+                        <div class="skill-item">
+                            <span class="name">${name.charAt(0).toUpperCase() + name.slice(1)}</span>
+                            <div class="bar"><div class="fill" style="width:${score}%;"></div></div>
+                            <span class="score">${score}%</span>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="achievements-section">
+                    <h3>🏆 Достижения</h3>
+                    ${achievements.length ? achievements.map(a => `
+                        <div class="achievement-item">
+                            <span class="icon">${a.icon || '🏆'}</span>
+                            ${a.name}
+                            <span style="color:var(--muted);font-size:12px;">+${a.xp_reward} XP</span>
+                        </div>
+                    `).join('') : '<div style="color:var(--muted);">Нет достижений</div>'}
+                </div>
+
+                <div class="progress-section">
+                    <h3>📈 Последние лаборатории</h3>
+                    ${progress.length ? progress.map(p => `
+                        <div class="progress-item">
+                            <span class="lab">Lab ${p.lab_id}</span>
+                            <span class="score">${p.score}/100</span>
+                            <span class="date">${new Date(p.created_at).toLocaleDateString('ru-RU')}</span>
+                        </div>
+                    `).join('') : '<div style="color:var(--muted);">Нет прохождений</div>'}
+                </div>
+
+                <a href="/static/dashboard.html" class="btn-back">← На дашборд</a>
+            `;
+
+            container.innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('profileContainer').innerHTML =
+                `<div style="color:#ff4444;text-align:center;">❌ Ошибка: ${err.message}</div>`;
+        });
+    </script>
+</body>
+</html>

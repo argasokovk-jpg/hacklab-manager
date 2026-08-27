@@ -1,0 +1,24 @@
+{
+    "id": 2,
+    "name": "Network Reconnaissance",
+    "description": "Сканирование портов, разведка, анализ сетевых служб. Используй nmap и другие инструменты.",
+    "category": "network",
+    "difficulty": "medium",
+    "duration": 45,
+    "tasks": [
+        {
+            "id": 1,
+            "description": "Определи открытые порты на scanme.nmap.org",
+            "hint": "Используй nmap -sS -p- scanme.nmap.org"
+        },
+        {
+            "id": 2,
+            "description": "Определи версию службы на открытом порту",
+            "hint": "Используй nmap -sV -p 80 scanme.nmap.org"
+        }
+    ],
+    "docker": {
+        "image": "hacklab/lab:latest",
+        "workdir": "/home/student"
+    }
+}

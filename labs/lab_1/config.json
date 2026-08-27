@@ -1,0 +1,19 @@
+{
+    "id": 1,
+    "name": "Linux Fundamentals",
+    "description": "Освой базовые команды Linux: навигация, файлы, процессы",
+    "category": "linux",
+    "difficulty": "easy",
+    "duration": 30,
+    "tasks": [
+        {
+            "id": 1,
+            "description": "Найди файл secret.txt в системе",
+            "hint": "Используй команду find"
+        }
+    ],
+    "docker": {
+        "image": "hacklab/lab:latest",
+        "workdir": "/home/student"
+    }
+}

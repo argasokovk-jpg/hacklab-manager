@@ -79,11 +79,26 @@
             background: #ff4444;
             color: #0a0e14;
         }
+        nav a {
+            color: #8899aa;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+        nav a:hover { color: #00e5ff; }
+        nav a.active { color: #00e5ff; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🧠 Lab 1: Linux Fundamentals</h1>
+        <div style="display:flex;align-items:center;gap:20px;">
+            <h1>🧠 Lab 1: Linux Fundamentals</h1>
+            <nav>
+                <a href="/static/dashboard.html">Дашборд</a>
+                <a href="/static/profile.html">Профиль</a>
+            </nav>
+        </div>
         <div>
             <span class="status" id="connectionStatus">● <span class="online">Подключено</span></span>
             <button class="btn btn-danger" onclick="finishLab()" style="margin-left: 16px;">Завершить</button>
@@ -106,6 +121,9 @@
             window.location.href = '/static/login.html';
         }
 
+        const params = new URLSearchParams(window.location.search);
+        const labId = params.get('id') || 1;
+
         // Создаём терминал
         const term = new Terminal({
             cursorBlink: true,
@@ -120,7 +138,7 @@
         term.focus();
 
         // Подключаем WebSocket
-        const ws = new WebSocket(`ws://${window.location.host}/ws/lab?token=${token}`);
+        const ws = new WebSocket(`ws://${window.location.host}/ws/lab?token=${token}&lab_id=${labId}`);
 
         ws.onopen = () => {
             term.write('\x1b[32m→ Подключено к лаборатории\x1b[0m\r\n');
@@ -177,7 +195,7 @@
             if (confirm('Завершить лабораторию?')) {
                 ws.send(JSON.stringify({ command: '__finish__' }));
                 setTimeout(() => {
-                    window.location.href = '/static/result.html?id=1';
+                    window.location.href = `/static/result.html?id=${labId}`;
                 }, 500);
             }
         }
